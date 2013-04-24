@@ -43,7 +43,7 @@ public class FindPasswordAction extends ActionSupport {
 				 Mail sendmail = new Mail();
 			     sendmail.setHost("smtp.qq.com");            //发邮件服务器
 			     sendmail.setUserName("269574524");         //用户名
-			     sendmail.setPassWord("longjump6.78");           //密码
+			     sendmail.setPassWord("password");           //密码
 			     sendmail.setTo(user_.getEmail());            //发送到:sky_zd@126.com
 			     sendmail.setFrom("269574524@qq.com");     //发送邮箱
 			     sendmail.setSubject("Your Password on Online Judge");             //标题
