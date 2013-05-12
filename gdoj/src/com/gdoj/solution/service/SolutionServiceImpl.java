@@ -1,5 +1,6 @@
 package com.gdoj.solution.service;
 
+import java.util.Date;
 import java.util.List;
 
 import com.gdoj.solution.dao.SolutionDAO;
@@ -38,10 +39,10 @@ public class SolutionServiceImpl implements SolutionService {
 		return solutionDao.query(sql);
 	}
 	
-	public List<Integer> getBydaily(){
-		return solutionDao.getBydaily();
+	public List<Integer> getBydaily(Date date, Integer size){
+		return solutionDao.getBydaily(date, size);
 	}
-	public List<Integer> getBymonthly(){
-		return solutionDao.getBymonthly();
+	public List<Integer> getBymonthly(Date date, Integer size){
+		return solutionDao.getBymonthly(date, size);
 	}
 }

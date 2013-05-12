@@ -4,12 +4,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.opensymphony.xwork2.ActionSupport;
+import com.util.Config;
 import com.util.StreamHandler;
 
 public class GetFileListAction extends ActionSupport{
 private static final long serialVersionUID = -29181731L;
-	
+	private String type;
 	private String path;
+	
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
 	public String getPath() {
 		return path;
 	}
@@ -32,7 +42,8 @@ private static final long serialVersionUID = -29181731L;
 	public String fileList() {
 		
 		try {
-			String[] inN = StreamHandler.getFilesNameList(path);
+			String[] inN = StreamHandler.getFilesNameList( Config.getValue(type) + path);
+			
 			inputFilesName = new ArrayList<String>();
 			
 			if(inN != null)

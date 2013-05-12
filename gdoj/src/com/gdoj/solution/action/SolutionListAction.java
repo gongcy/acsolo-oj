@@ -199,6 +199,7 @@ public class SolutionListAction extends ActionSupport{
 			pageList = volume;
 		} catch (Exception e) {
 			// TODO: handle exception
+			System.out.println("ERROR");
 			return ERROR;
 		}
 		return SUCCESS;

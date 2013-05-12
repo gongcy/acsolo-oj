@@ -25,17 +25,35 @@ public class ProblemDaoImpl  extends HibernateDaoSupport implements ProblemDAO  
 		return list.get(0);
 	}
 
-	public List<Problem> queryProblems(Integer from, Integer pageSize,String order,String role) {
+	public List<Problem> queryProblems(Integer from, Integer pageSize, String order, String ojName, String role) {
 		// TODO Auto-generated method stub
 		Session session = HibernateSessionFactory.getSession();
 		session.beginTransaction();
 		String sql =new String();
+		String condition = new String();
 		String order_str =new String();
+		
+		sql = "select p from Problem p ";
+		
 		if(role.equals("admin")){
-			sql = "select p from Problem p ";
 		}else{
-			sql = "select p from Problem p where p.contest_id=0 ";
+			condition = "where p.contest_id=0 ";
 		}
+		
+		if (ojName != null && ojName.length() != 0)
+		{
+			if (condition != null && !"".equals(condition))
+			{
+				condition += " and p.oj_name = '" + ojName +"'";
+			}
+			else
+			{
+				condition = " where p.oj_name = '" + ojName +"'";
+			}
+		}
+		
+		sql += condition;
+		
 		if("BY_SOLVED_DESC".equals(order)){
 			order_str="order by p.solved DESC,p.problem_id DESC";
 		}else if("BY_SOLVED_ASC".equals(order)){
@@ -70,14 +88,30 @@ public class ProblemDaoImpl  extends HibernateDaoSupport implements ProblemDAO  
 		// TODO Auto-generated method stub
 		this.getHibernateTemplate().saveOrUpdate(problem);
 	}
-	public Integer countProblems(String role){
+	public Integer countProblems(String role, String ojName){
 		String sql = new String() ;
+		String condition = new String();
+		
+		sql = "select count(p.problem_id) from Problem p ";
 		
 		if(role.equals("admin")){
-			sql = "select count(p.problem_id) from Problem p";
 		}else{
-			sql = "select count(p.problem_id) from Problem p where p.contest_id=0";
+			condition = "where p.contest_id=0 ";
 		}
+		
+		if (ojName != null && ojName.length() != 0)
+		{
+			if (condition != null && !"".equals(condition))
+			{
+				condition += " and p.oj_name = '" + ojName +"'";
+			}
+			else
+			{
+				condition = " where p.oj_name = '" + ojName +"'";
+			}
+		}
+		
+		sql += condition;
 		
 		List list = getHibernateTemplate().find(sql);
 		if (list != null && list.size() > 0) {

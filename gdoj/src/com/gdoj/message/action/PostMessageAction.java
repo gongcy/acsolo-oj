@@ -148,7 +148,7 @@ public class PostMessageAction extends ActionSupport {
 				
 				if(dt_prevSubmit!=null){
 					//System.out.println(dt.getTime()-dt_prevSubmit.getTime());
-					if(dt.getTime()-dt_prevSubmit.getTime()<5000){  //限制5s一次提交
+					if(dt.getTime()-dt_prevSubmit.getTime()<10000){  //限制5s一次提交
 						System.out.println(createUser+" submit-topic twice at 5 second.");
 					//	this.addFieldError("tip", "");
 						success = true;

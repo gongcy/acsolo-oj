@@ -1,6 +1,7 @@
 package com.gdoj.solution.action;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -29,6 +30,7 @@ public class StatisticAction extends ActionSupport{
 	private ContestService contestService;
 	private UserService userService;
 	private String  type;
+	private Integer size = 30;
 	private List<StatisticBean> list;
 	private boolean success;
 	private String error;
@@ -45,6 +47,12 @@ public class StatisticAction extends ActionSupport{
 		this.list = list;
 	}
 	
+	public Integer getSize() {
+		return size;
+	}
+	public void setSize(Integer size) {
+		this.size = size;
+	}
 	public boolean isSuccess() {
 		return success;
 	}
@@ -61,25 +69,51 @@ public class StatisticAction extends ActionSupport{
 		
 		try {
 			List<Integer> list_ = new ArrayList<Integer>();
+			List<StatisticBean> list_res = new ArrayList<StatisticBean>();
+			
+			Calendar calendar = Calendar.getInstance();
+
+			Date t = calendar.getTime();
+			
 			if ("hourly".equals(type)) {
 				list_ = null;
 			} else if ("daily".equals(type)) {
-				list_ = solutionService.getBydaily();
+				list_ = solutionService.getBydaily(t,size);
+				calendar.add(Calendar.DATE, 1); //得到x一天;
+				calendar.set(calendar.get(Calendar.YEAR),calendar.get(Calendar.MONTH),calendar.get(Calendar.DATE),0,0,0);
 			} else if ("monthly".equals(type)) {
-				list_ = solutionService.getBymonthly();
+				list_ = solutionService.getBymonthly(t,size);
+				calendar.add(Calendar.MONTH, 1); //得到x一月;
+				calendar.set(calendar.get(Calendar.YEAR),calendar.get(Calendar.MONTH),1,0,0,0);
 			} else {
-				list_ = solutionService.getBydaily();
+				list_ = solutionService.getBydaily(t,size);
+				calendar.add(Calendar.DATE, 1); //得到x一天;
+				calendar.set(calendar.get(Calendar.YEAR),calendar.get(Calendar.MONTH),calendar.get(Calendar.DATE),0,0,0);
 			}
 			list = new ArrayList<StatisticBean>();
-			
+
 			for(int i=0;i < list_.size();i++){
 				StatisticBean e = new StatisticBean();
-				Date t = new Date();
-				e.setX(t.getTime()+i*1000*60*24*30);
+				e.setX(calendar.getTimeInMillis());    
 				e.setY(list_.get(i));
-				list.add(e);
+				list_res.add(e);
+				
+				if ("hourly".equals(type)) {
+					list_ = null;
+				} else if ("daily".equals(type)) {
+					calendar.add(Calendar.DATE, -1); //得到前一天;
+				} else if ("monthly".equals(type)) {
+					calendar.add(Calendar.MONTH, -1); //得到前一天;
+				} else {
+					calendar.add(Calendar.DATE, -1); //得到前一天;
+				}
 			}
 			
+			for (int i=list_.size() - 1;i >= 0; i--)
+			{
+				list.add(list_res.get(i));
+			}
+		
 		} catch (Exception e) {
 			// TODO: handle exception
 			success = false;		

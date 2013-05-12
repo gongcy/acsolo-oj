@@ -77,7 +77,8 @@ $(document).ready(function(){
 	            <div class="rb">&nbsp;</div>         
 	    	<div style="padding: 4px 0 0 6px;position: relative;">
 				<div class="left"><s:text name="standings"/></div>
-				<div class="right"><span style="font-size:10px;color:grey;">double click the cells problem bellow to view history submissions.</span></div>
+				<div class="right"><span style="font-size:10px;color:grey;"><s:text name="contestcellnote"/>
+				</span></div>
 			</div> 		
 			<div class="innertable" style="">
 				<div class="ilt">&nbsp;</div>

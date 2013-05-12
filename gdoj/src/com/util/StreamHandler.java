@@ -35,7 +35,7 @@ public class StreamHandler {
 			out.write(content);
 			out.close();
 		} catch (Exception e) {
-			log.warn("---- write to outputStream catches a IOException, outputStream not available ----");
+			//log.warn("---- write to outputStream catches a IOException, outputStream not available ----");
 		}
 	}
 	
@@ -54,7 +54,7 @@ public class StreamHandler {
 			in.close();
 			return sb.toString();
 		} catch (IOException ioe) {
-			log.warn("---- read file by fileName catches a IOException, file not found ----");
+			//log.warn("---- read file by fileName catches a IOException, file not found ----");
 			return null;
 		}
 	}
@@ -74,7 +74,7 @@ public class StreamHandler {
 			in.close();
 			return sb.toString();
 		} catch (IOException ioe) {
-			log.warn("---- read file by file catches a IOException, file not found ----");
+			//log.warn("---- read file by file catches a IOException, file not found ----");
 			return null;
 		}
 	}
@@ -249,7 +249,7 @@ public class StreamHandler {
 		/**
 		 * return a File[] of input-testcase's files by problem's id.
 		 */
-		File file = new File(Config.getValue("OJ_PATH")+path);
+		File file = new File(path);
 	
 		if (file.isDirectory()) 
 			return file.list();
@@ -259,5 +259,6 @@ public class StreamHandler {
     {
 		System.out.println("1001");
 		getInputFiles(1001);
+		
     }
 }

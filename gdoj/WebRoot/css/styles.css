@@ -50,7 +50,7 @@ pre.prettyprint{font-size:110%;font-size:12px;line-height: 14px;min-height:308px
 	min-height:338px;
 }
 .pop-div{
-			z-index:1001; width:50%; height:400px;
+			z-index:1001; width:622px; height:400px;
 			/*border:3px #e1e1e1 solid;*/
 			padding:3px 3px;
 		    background-color:#fff;
@@ -77,10 +77,20 @@ pre.prettyprint{font-size:110%;font-size:12px;line-height: 14px;min-height:308px
 }
 
 .pop-inner-div{
-			position:relative;height:378px;overflow: auto;margin:0px;padding:0px 12px; background-color:#fff;
+			position:relative;height:378px; overflow: auto;margin:0px;padding:0px 12px; background-color:#fff;
 			border:1px #fff solid;
 			word-wrap:break-all;
 }
+
+.pop-div-source{
+	word-wrap:break-all;	
+}
+.pop-div-judgelog{	
+	word-wrap:no-break-word;
+	white-space:nowrap;
+	line-height: 10px;
+}	
+	
 table{border-collapse:collapse;border-spacing:0;}
 
 body,select,input{font-family:verdana,arial,sans-serif;}
@@ -341,6 +351,7 @@ box-shadow:0 2px 3px rgba(0,0,0,.33);
  	 display:inline;
  	 padding:0px;
  	 margin-top:30px;
+
 }
 .news{
 	 margin:3px;
@@ -364,6 +375,7 @@ box-shadow:0 2px 3px rgba(0,0,0,.33);
 	 margin: 0px;
   	 padding: 0px 0px 4px 0px;
  	 font-size: 100%;
+
 }
 
 .caption{position:relative;}

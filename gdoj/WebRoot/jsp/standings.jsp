@@ -56,7 +56,7 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 					 <tr class="header" style="">  
 		               	 <th  class="rank left-item">#</th>
 		               	 <th  class="coder"><s:text name="author"/></th>
-		               	 <!-- <th  class="motto"><s:text name="motto"/></th> -->
+		               	 <th  class="motto"><s:text name="motto"/></th> 
 		                 <th  class="solved" > <s:text name="solved"/></th>
 		                 <th  class="rating"><s:text name="submit"/></th>
 	                </tr>
@@ -64,12 +64,12 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 	                 <tr><td class="left-item dark" colspan="15" style="text-align: left;">There is no records.</td></tr>
 	                </s:if>
 					<s:iterator value="usersList" status="st">	
-	            	<tr class="<s:if test="#st.odd">dark</s:if> <s:if test="#session.session_username==username">my</s:if>">
-	            		<td class="rank left-item"><s:property value="(page-1)*pageSize+#st.index+1"/></td>
-	            		<td class="coder">
+	            	<tr class="<s:if test="#st.odd">dark</s:if>">
+	            		<td class="rank left-item <s:if test="#session.session_username==username">my</s:if>"><s:property value="(page-1)*pageSize+#st.index+1"/></td>
+	            		<td class="coder <s:if test="#session.session_username==username">my</s:if>">
 	            			<b><a href="profile/<s:property value="username"/>" class="user-tip" user="<s:property value="username"/>"><s:property value="username"/></a></b>
 	            		</td>
-<!--	            		<td class="motto"><s:property value="motto"/></td>-->
+	            		<td class="motto"><s:property value="motto"/></td>
 	            		<td class="solved2">
 	            		<a href="problemset/status/with/<s:property value="username"/>/page/1" >
 	            		<s:property value="solved"/>

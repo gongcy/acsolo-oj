@@ -22,9 +22,9 @@ public class ProblemServiceImpl implements ProblemService {
 	}
 
 	public List<Problem> queryProblems(Integer from, Integer pageSize,
-			String order,String role) {
+			String order, String ojName,String role) {
 		// TODO Auto-generated method stub
-		return problemDao.queryProblems(from, pageSize, order,role);
+		return problemDao.queryProblems(from, pageSize, order,ojName,role);
 	}
 	public List<Problem> searchProblem(Integer pageSize,String searchString){
 		return problemDao.searchProblem(pageSize,searchString);
@@ -33,8 +33,8 @@ public class ProblemServiceImpl implements ProblemService {
 		// TODO Auto-generated method stub
 		problemDao.save(problem);
 	}
-	public Integer countProblems(String role){
-		return problemDao.countProblems(role);
+	public Integer countProblems(String role, String ojName){
+		return problemDao.countProblems(role,ojName);
 	}
 	public List<Problem> query(String sql,String word){
 		return problemDao.query(sql, word);

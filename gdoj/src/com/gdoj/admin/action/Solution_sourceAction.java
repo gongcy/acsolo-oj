@@ -1,9 +1,14 @@
 package com.gdoj.admin.action;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Date;
 
+import org.apache.struts2.ServletActionContext;
 import org.apache.struts2.json.annotations.JSON;
 import org.hibernate.jdbc.Expectation;
+import org.json.simple.JSONObject;
 
 import com.gdoj.contest.problem.service.CProblemService;
 import com.gdoj.contest.service.ContestService;
@@ -17,6 +22,8 @@ import com.gdoj.user.service.UserService;
 import com.gdoj.user.vo.User;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
+import com.util.Config;
+import com.util.StreamHandler;
 
 public class Solution_sourceAction extends ActionSupport {
 
@@ -46,7 +53,15 @@ public class Solution_sourceAction extends ActionSupport {
 	private String problemId;
 	private String className;
 	private String contestTitle;
+	private String judgeLog;
 	
+	public String getJudgeLog() {
+		return judgeLog;
+	}
+
+	public void setJudgeLog(String judgeLog) {
+		this.judgeLog = judgeLog;
+	}
 	public String getContestTitle() {
 		return contestTitle;
 	}
@@ -122,12 +137,113 @@ public class Solution_sourceAction extends ActionSupport {
 			className = "brush:"+className_[solution.getLanguage()-1]+";";
 			
 			
+			try {
+				File file;
+				judgeLog = new String();
+				file = new File(Config.getValue("OJ_JUDGE_LOG") + "judge-log-"
+						+ solutionId + ".log");
+				judgeLog = StreamHandler.read(file);
+			} catch (Exception e) {
+				// TODO: handle exception
+			}
+			
 			return SUCCESS;
 		} catch (Exception e) {
 			// TODO: handle exception
 			return ERROR;
 		}
 	}
+	
+	public void outString(String str) {
+		try {
+			PrintWriter out = ServletActionContext.getResponse().getWriter();
+			out.write(str);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public String JsonSolutionSource() throws IOException{
+		String username = (String)ActionContext.getContext().getSession().get("session_username");
+		if (username == null) {
+			outString(getError("need login!"));
+			return null;
+		}
+		
+		Solution_source solutionSource_ = new Solution_source();
+		solutionSource_ = solutionSourceService
+				.querySolutionSource(solutionId);
+		if (null == solutionSource_) {			
+			outString(getError("No such solution source."));
+			return null;
+		}
+		Solution solution_ = new Solution();
+		solution_ = solutionService.querySolution(solutionId);
+		if (null == solution_) {
+			outString(getError("No such solution!"));
+			return null;
+		}
+		
+		String problemTitle_ = new String();
+		problemId = new String();
+		if(solution_.getContest_id()>0){
+			problemId = cproblemService.queryProblemByPid(solution_.getProblem_id(), solution_.getContest_id()).getNum();
+			problemTitle_ = cproblemService.queryProblemByPid(solution_.getProblem_id(), solution_.getContest_id()).getTitle();
+		
+		}else{
+			problemId = solution_.getProblem_id().toString();
+			problemTitle_ = problemService.queryProblem(solution_.getProblem_id()).getTitle();
+		}
+		
+		//System.out.println(problemId+problemTitle_);
+		
+		if (null == problemTitle_) {
+	        outString(getError("No such problem."));
+			return null;
+		}
+		solution = solution_;
+		solutionSource = solutionSource_;
+		problemTitle = problemTitle_;
+		verdict = getText("verdict"+solution_.getVerdict());
+		
+		String className_[]={"cpp","cpp","cpp","cpp","java","csharp","fsharp","delphi","python","ruby","perl","lua","tcl","pike","haskell","php","bf","bf","go","scala","jscript","groovy"};
+
+		className = "brush:"+className_[solution.getLanguage()-1]+";";
+				
+		try {
+			File file;
+			judgeLog = new String();
+			file = new File(Config.getValue("OJ_JUDGE_LOG") + "judge-log-"
+					+ solutionId + ".log");
+			judgeLog = StreamHandler.read(file);
+		} catch (Exception e) {
+			// TODO: handle exception
+		}		
+		
+		JSONObject obj = new JSONObject();  
+
+        obj.put("error", 0);  
+        obj.put("source", solution); 
+        obj.put("solutionSource", solutionSource); 
+        obj.put("problemTitle", problemTitle); 
+        obj.put("problemId", problemId); 
+        obj.put("solutionId", solutionId); 
+        obj.put("verdict", verdict); 
+        obj.put("className", className); 
+        obj.put("contestTitle", contestTitle); 
+        obj.put("judgeLog", judgeLog); 
+        obj.put("message", "Operate Success...");                            
+        outString(obj.toJSONString());
+        return null;
+	}
+	
+	private String getError (String message )  
+	{  
+        JSONObject obj = new JSONObject();  
+        obj.put("error", 1);  
+        obj.put("message", message);  
+        return obj.toJSONString();  
+    }
 	
 	public CProblemService getCproblemService() {
 		return cproblemService;

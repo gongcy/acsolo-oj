@@ -1,4 +1,4 @@
-<%@ page language="java" import="java.util.*" pageEncoding="UTF-8"%>
+﻿<%@ page language="java" import="java.util.*" pageEncoding="UTF-8"%>
 <%@taglib uri="/struts-tags" prefix="s"%>
    
    	<link href="css/jquery-ui.css" rel="stylesheet" type="text/css"/>
@@ -23,6 +23,9 @@
 		height: 200px;
 	}	
 	</style>
+	
+	<jsp:include page="/WEB-INF/templates/sidebarex.html"></jsp:include>
+	
 
 	<div class="sidebox roundbox ">
             	<div class="roundbox-lt">&nbsp;</div>
@@ -171,7 +174,7 @@ $(document).ready(function() {
 	                 var opt="";   
 		          	 for(var i in json.usersList){	
 		          		 size++;	
-					 	 opt+="<b><a style='font-size:12px;' href='profile/"+json.usersList[i]+"'>"+json.usersList[i]+"</a></b><br/>"	 	
+					 	 opt+="<b><a style='font-size:12px; padding:0 10 0 0px;' href='profile/"+json.usersList[i]+"'>"+json.usersList[i]+"</a></b>"	 	
 					}  							
 					$(".user-sum").html(size);	
 					if(size==0){

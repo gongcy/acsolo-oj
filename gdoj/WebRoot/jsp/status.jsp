@@ -101,8 +101,17 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 	            		<s:else>
 	            			<s:property value="%{getText('verdict'+solutionList[#st.index].verdict)}"/>	
 	            			<s:if test="solutionList[#st.index].verdict==5"></s:if>
-	            			<s:elseif test="solutionList[#st.index].verdict==4"><span>on test <s:property value="testcase" default="1"/></span></s:elseif>
-	            			<s:elseif test="solutionList[#st.index].verdict>5"><span>on test <s:property value="testcase" default="1"/></span></s:elseif>	            			
+	            			<s:elseif test="solutionList[#st.index].verdict==4">
+<s:if test="testcase>0">
+<span>on test <s:property value="testcase" default="1"/></span>
+</s:if>
+
+</s:elseif>
+	            			<s:elseif test="solutionList[#st.index].verdict>5">
+<s:if test="testcase>0">
+<span>on test <s:property value="testcase" default="1"/></span>
+</s:if>
+</s:elseif>	            			
 	            		</s:else>
 	            		
 	            		</td>  
@@ -132,7 +141,7 @@ function load(){
                 			 var results = $('.verdict[status='+i+'][manual=0]').each(function(i, el){
                                 var zz = $(el).attr('id').substring(7);
                                 a.push( zz );
-                                $("#status_" + zz).html($("#status_" + zz).val()+loader);
+                                //$("#status_" + zz).html($("#status_" + zz).val()+"...");
                                 //$('#time_'+zz).html(loader);
                        	 	});
                 		} 
@@ -154,7 +163,13 @@ function load(){
                                         $("#time_" + data.status[i].solutionId).html(data.status[i].time+" MS");
                                         $("#memory_" + data.status[i].solutionId).html(data.status[i].memory+" KB");
                                         if( data.status[i].verdictId >5 ){
-                                         		$("#status_" + data.status[i].solutionId).html(data.status[i].status_description+" on test "+data.status[i].testCase);
+if (data.status[i].testCase>0)
+{
+                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description +" on test "+data.status[i].testCase);
+}
+else{
+                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description);
+}
                                         		$("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_other');
                                         }
 					 					if(  data.status[i].verdictId == 5 ){
@@ -166,7 +181,14 @@ function load(){
                                                $("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_pe');
                                         }
                                         if( data.status[i].verdictId == 4 ){
-                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description +" on test "+data.status[i].testCase+loader);
+if (data.status[i].testCase>0)
+{
+                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description +" on test "+data.status[i].testCase);
+}
+else{
+                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description);
+}
+
                                                 $("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_prev');
                                               //  $("#time_" + data.status[i].solutionId).html( loader );
                                                 
@@ -177,13 +199,13 @@ function load(){
                                               $("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_ce');
                                         }
  										if( data.status[i].verdictId < 3 ){
-                                         	   $("#status_" + data.status[i].solutionId).html(data.status[i].status_description+loader);
+                                         	   $("#status_" + data.status[i].solutionId).html(data.status[i].status_descriptio);
                                                $("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_prev');
                                             //   $("#time_" + data.status[i].solutionId).html( loader );
                                         }                                       
                                 }
                                
-								setTimeout(load, 4000);
+								setTimeout(load, 5000);
                         }
                 	});
                 }
@@ -258,6 +280,14 @@ $(document).ready(function(){
 		            opt+="</pre><br>";
 		           	//alert(opt);
        				$(".pop-div .pop-div-source").html(opt);
+       				
+       				opt="<h5>Judge Log:</h5><br>" ;
+       				opt+="<pre class='prettyprint'>";
+       				opt+=json.judgeLog;
+		            opt+="</pre><br>";
+       				
+       				$(".pop-div .pop-div-judgelog").html(opt);
+       				
        				prettyPrint();	
 	 
        		 }); 
@@ -285,6 +315,7 @@ $(document).ready(function(){
 		            opt+=json.errorInfo;
 		           	opt+="</pre><br>";
        				$(".pop-div .pop-div-source").html(opt);
+       				
 	 
        		 }); 
        		 return false;
@@ -301,12 +332,14 @@ $(document).ready(function(){
 	  	 <p class="pop-div-note"></p>	 
 		 <p class="pop-div-content"></p>
 		 <div class="pop-div-source"></div>
+		 <div class="pop-div-judgelog"></div>
 		 </div>
 		 <script type="text/javascript">
 			 $(document).ready(function() {	 
 			 	$("a.close").click(function(){
 			 		$(".pop-div p.pop-div-content").html(""); 
 				    $(".pop-div .pop-div-source").html(""); 
+				    $(".pop-div .pop-div-judgelog").html("");
 			 		 $(".pop-div").fadeOut(); 
 			 	});
 

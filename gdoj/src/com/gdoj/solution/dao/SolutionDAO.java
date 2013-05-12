@@ -1,5 +1,6 @@
 package com.gdoj.solution.dao;
 
+import java.util.Date;
 import java.util.List;
 
 import com.gdoj.solution.vo.Solution;
@@ -10,6 +11,6 @@ public interface SolutionDAO {
 	public Integer countSolutions(String sql);
 	public void save(Solution solution);
 	public List<Object> query(String sql);	
-	public List<Integer> getBydaily();
-	public List<Integer> getBymonthly();
+	public List<Integer> getBydaily(Date date, Integer size);
+	public List<Integer> getBymonthly(Date date, Integer size);
 }

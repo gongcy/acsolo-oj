@@ -62,8 +62,7 @@ public class ContestShowAction extends ActionSupport{
 				timeLeft = (contest.getEnd_time().getTime()-nowTime.getTime())/1000;
 
 			}
-			
-			
+
 			//System.out.println(contest.getTitle());
 			problemList = cproblemService.queryProblems(contestId);
 			
@@ -72,16 +71,19 @@ public class ContestShowAction extends ActionSupport{
 				String sql = new String();
 				problemStatusList = new ArrayList<Integer>();
 				for(CProblem p:problemList){
-					sql="select count(s.solution_id) from Solution s where username='"+username+"' and s.problem_id="+p.getProblem_id() ;
+					sql="select count(s.solution_id) from Solution s where username='"+username+"' and s.problem_id="+p.getProblem_id() + " and contest_id="+contestId;
 					if(solutionService.countSolutions(sql)>0){
 						//5 AC
-						sql="select count(s.solution_id) from Solution s where username='"+username+"' and s.verdict=5  and s.problem_id="+p.getProblem_id() ;
+						sql="select count(s.solution_id) from Solution s where username='"+username+"' and s.verdict=5  and s.problem_id="+p.getProblem_id() + " and contest_id="+contestId ;
 						if(solutionService.countSolutions(sql)>0){
+							//System.out.println("AC" + p.getProblem_id());
 							problemStatusList.add(1);
 						}else{
+							//System.out.println("WE" + p.getProblem_id());
 							problemStatusList.add(2); //WA Other
 						}
 					}else{
+						//System.out.println("NO" + p.getProblem_id());
 						problemStatusList.add(0);
 					}
 				}	
