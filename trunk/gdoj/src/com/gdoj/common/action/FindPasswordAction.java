@@ -1,9 +1,12 @@
 package com.gdoj.common.action;
 
+import java.util.Date;
+
 import com.gdoj.user.service.UserService;
 import com.gdoj.user.vo.User;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
+import com.util.Config;
 import com.util.Mail;
 
 public class FindPasswordAction extends ActionSupport {
@@ -31,6 +34,19 @@ public class FindPasswordAction extends ActionSupport {
 	public String execute()throws Exception {
 		try {
 			
+			Date dt_prevSubmit = (Date)ActionContext.getContext().getSession().get("session_submit");
+			Date dt = new Date(); 
+			
+			if(dt_prevSubmit!=null){
+				//System.out.println(dt.getTime()-dt_prevSubmit.getTime());
+				if(dt.getTime()-dt_prevSubmit.getTime()<30000){  //限制30s一次提交
+					System.out.println(username+" submit twice at 30 second.");
+					ActionContext.getContext().put("tip", "Don't operate twice at 30 second, try it after 30 second.");
+					return "success";
+				}
+			}
+			ActionContext.getContext().getSession().put("session_submit", dt);
+			
 			System.out.println(username+" recover password.");
 			if(false==userService.isUsernameExist(username)){
 				System.out.println(username + " is not exist.");
@@ -41,15 +57,24 @@ public class FindPasswordAction extends ActionSupport {
 			user_ = userService.queryUser(username);
 			if (null != user_) {
 				 Mail sendmail = new Mail();
-			     sendmail.setHost("smtp.qq.com");            //发邮件服务器
-			     sendmail.setUserName("269574524");         //用户名
-			     sendmail.setPassWord("password");           //密码
+			     sendmail.setHost(Config.getValue("MAIL_HOST"));            //发邮件服务器
+			     sendmail.setUserName(Config.getValue("MAIL_USERNAME"));         //用户名
+			     sendmail.setPassWord(Config.getValue("MAIL_PSW"));           //密码
 			     sendmail.setTo(user_.getEmail());            //发送到:sky_zd@126.com
-			     sendmail.setFrom("269574524@qq.com");     //发送邮箱
-			     sendmail.setSubject("Your Password on Online Judge");             //标题
+			     sendmail.setFrom(Config.getValue("MAIL_FROM"));     //发送邮箱
+			     sendmail.setSubject(Config.getValue("MAIL_TITLE"));             //标题
+			     
+			     /*
+			     System.out.println(Config.getValue("MAIL_HOST") + " "+
+			    		 Config.getValue("MAIL_USERNAME") + " "+
+			    		 Config.getValue("MAIL_PSW") + " "+
+			    		 user_.getEmail() + " "+
+			    		 Config.getValue("MAIL_FROM") + " "+
+			     		 Config.getValue("MAIL_TITLE"));
+			     */
 			     
 			     String content_ = new String();
-			     content_ = "Hi! "+username+" , Your password is:"+user_.getPassword()+"\n http://acm.guetonline.com";
+			     content_ = "Hi! "+username+" , your password is:"+user_.getPassword()+"\n "+Config.getValue("DOMAIN");
 			     
 			     sendmail.setContent(content_);          //邮件内容
 			     sendmail.sendMail();
@@ -60,7 +85,6 @@ public class FindPasswordAction extends ActionSupport {
 			}
 		} catch (Exception e) {
 			// TODO: handle exception
-			
 			return ERROR;
 		}
 	}

@@ -7,13 +7,13 @@
 	<constant name="struts.custom.i18n.resources" value="globalMessages"></constant>
 	<!-- 此constant设置临时文件存放目录，因为默认的default.properties中没有指定 -->
 	<constant name="struts.multipart.saveDir" value="/tmp"/>
-	<constant name="struts.multipart.maxSize" value="90000000"/>
+	<constant name="struts.multipart.maxSize" value="9000000000"/>
 	<!-- 将action托管给spring -->
 	<constant name="struts.action.extension" value=",action,do"/>
 	<constant name="struts.objectFactory" value="spring"></constant>
 	
 	<!-- 设置为开发模式 -->
-    <constant name="struts.devMode" value="false" />
+    <constant name="struts.devMode" value="true" />
     
     
     <package name="gdoj" extends="struts-default" >
@@ -24,6 +24,8 @@
 			<interceptor name="isContestStart" class="contestInterceptorBean"/>
 			<interceptor name="isContestRegister" class="IsContestRegisterInterceptorBean"/>
 			<interceptor name="isAdmin" class="com.gdoj.common.interceptor.IsNoEditAdminInterceptor"/>
+			<interceptor name="isAdmin2" class="com.gdoj.common.interceptor.IsAdminInterceptor"/>
+			<interceptor name="isHead" class="com.gdoj.common.interceptor.IsHeadInterceptor"/>
 		</interceptors>
 		<global-results>
 			<result name="home">/index.jsp</result>
@@ -52,6 +54,7 @@
 			<interceptor-ref name="isLogin"></interceptor-ref>	
 			<interceptor-ref name="isAdmin"></interceptor-ref>			
 		</action>
+		
 		<action name="queue" class="com.gdoj.common.action.QueueAction">	
 			<result name="success" >/jsp/error.jsp</result>
 		</action>
@@ -174,6 +177,9 @@
 		</action>
 		<action name="statistic-chart">
 			<result name="success" >/jsp/chart.jsp</result>	
+			<interceptor-ref name="defaultStack"></interceptor-ref>			
+			<interceptor-ref name="isLogin"></interceptor-ref>
+			<interceptor-ref name="isAdmin2"></interceptor-ref>
 		</action>
 	</package>
 	<package name="topic" extends="struts-default" namespace="/topic">
@@ -378,7 +384,7 @@
 			<result name="success">/jsp/admin/problemshow.jsp</result>	
 			<interceptor-ref name="defaultStack"></interceptor-ref>			
 			<interceptor-ref name="isLogin"></interceptor-ref>
-			<interceptor-ref name="isAdmin"></interceptor-ref>
+			<interceptor-ref name="isAdmin2"></interceptor-ref>
 		</action>
 		<action name="newproblem">
 			<result name="success">/jsp/admin/addproblem.jsp</result>	
@@ -420,11 +426,18 @@
 			<interceptor-ref name="isHead"></interceptor-ref>	
 		</action>
 		
+		<action name="json-view-source" class="adminSolutionSourceBean" method="JsonSolutionSource">
+			<result name="success">/jsp/viewsource.jsp</result> 
+			<interceptor-ref name="defaultStack"></interceptor-ref>			
+			<interceptor-ref name="isLogin"></interceptor-ref>
+			<interceptor-ref name="isHead"></interceptor-ref>	
+		</action>
+		
 		<action name="contests" class="adminContestListBean" method="contestSet">
 			<result name="success">/jsp/admin/contestlist.jsp</result>	
 			<interceptor-ref name="defaultStack"></interceptor-ref>			
 			<interceptor-ref name="isLogin"></interceptor-ref>
-			<interceptor-ref name="isAdmin"></interceptor-ref>
+			<interceptor-ref name="isAdmin2"></interceptor-ref>
 		</action>	
 		<action name="contest" class="adminContestShowBean" method="contestShow">
 			<result name="success">/jsp/admin/contestshow.jsp</result>	
@@ -588,6 +601,16 @@
 			<interceptor-ref name="isLogin"></interceptor-ref>
 			<interceptor-ref name="isAdmin2"></interceptor-ref>
 		</action>
+				
+		<action name="operate" class="com.gdoj.admin.action.AdminAction">
+			<result name="input">/jsp/admin/index.jsp</result>
+			<result name="success" type="redirect">/admin</result>
+			<result name="admin">/jsp/admin/index.jsp</result>
+			<result name="switchs">/jsp/admin/switch.jsp</result>		
+			<interceptor-ref name="defaultStack"></interceptor-ref>			
+			<interceptor-ref name="isLogin"></interceptor-ref>
+			<interceptor-ref name="isAdmin2"></interceptor-ref>
+		</action>		
 	</package>
 	
 		 <!-- 注意这里扩展不再是 struts-default,而是 json-default -->  

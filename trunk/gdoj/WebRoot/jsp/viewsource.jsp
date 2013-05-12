@@ -73,7 +73,12 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 	            		</span>, <s:property value="%{getText('language'+solution.language)}"/>, <s:text name="timeuse"/>:<s:property value="solution.time" /> MS, <s:text name="memoryuse"/>:<s:property value="solution.memory" /> KB, <s:text name="codelength"/>:<s:property value="solution.code_length" /> B
 				</span>
 				<hr/>
-					<pre class="prettyprint"><s:property value="solutionSource.source" default="null"/></pre>	
+					<pre class="prettyprint"><s:property value="solutionSource.source" /></pre>	
+					
+				</div>
+				<div class="info" style="padding:12px;">
+				<h5>Judge Log:</h5>
+					<pre class="prettyprint"><s:property value="judgeLog" /></pre>	
 				</div>
 		    </div>	
 			 

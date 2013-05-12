@@ -14,10 +14,8 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 	<meta http-equiv="keywords" content="GUET,ACM,OnlineJudge,JAVA,C++,Program Contest">
 	<meta http-equiv="description" content="GuiLin University of Electronic Technology Online Judge System for ACM">
 	<link href="css/styles.css" type="text/css" rel="stylesheet">
-	
   	<script type="text/javascript" src="js/jquery-1.7.1.js"></script>
-  	<script type="text/javascript" src="js/gdoj.js"></script>
-  	<script type="text/javascript" src="js/ckeditor/ckeditor.js"></script> 	
+  	<script type="text/javascript" src="js/gdoj.js"></script>	
 <link type="text/css" rel="stylesheet" href="js/ckeditor/plugins/syntaxhighlight/styles/shCore.css"/>
 <link type="text/css" rel="stylesheet" href="js/ckeditor/plugins/syntaxhighlight/styles/shThemeDefault.css"/>
 <script type="text/javascript" src="js/ckeditor/plugins/syntaxhighlight/scripts/shCore.js"></script>
@@ -70,23 +68,34 @@ SyntaxHighlighter.all();
      	<a href="admin/user">Users</a>
      		<a href="admin/privilege">Privilege</a>		
      	</div>
-	    <div class="content round_0123" style="background-color:#EEE0E5;padding:3px 3px 3px 3px;">	    	
+	    <div class="content round_0123" style="background-color:#EEE0E5;position: relative;padding: 6px;">	    	
 			<div class="datatable round_0123" style="background-color:#FFF;word-wrap:break-word;">		    
 			    <s:form id="problemUpdate" method="post" action="problemUpdate.action" theme="simple">
 					<div style="padding:6px;">
 					<div style="text-align:center;" ><span class="fielderror"><s:property value="tip"/></span></div>
-					<center>Problem ID.<input  id="problem_id" name="problem.problem_id" style="width: 48px;"  value="<s:property value="problem.problem_id"/>"/>
+					<center>
+					
+					Problem ID.<input  id="problem_id" name="problem.problem_id" style="width: 48px;"  value="<s:property value="problem.problem_id"/>"/>
 					Special Judge 
 					<select id="spj"  style= "width:60px" name="problem.spj">
-						<option value="0" <s:if test="problem.problem.spj==0">selected="selected"</s:if>>No</option>
-						<option value="1" <s:if test="problem.problem.spj==1">selected="selected"</s:if>>Yes</option>
+						<option value="0" <s:if test="problem.spj==0">selected="selected"</s:if>>No</option>
+						<option value="1" <s:if test="problem.spj==1">selected="selected"</s:if>>Yes</option>
 					</select>
-					Contest Problem
+					Hide Problem
 					<select id="contest_id"  style= "width:60px" name="problem.contest_id">
 						<option value="0" <s:if test="problem.contest_id==0">selected="selected"</s:if>>No</option>
 						<option value="1" <s:if test="problem.contest_id==1">selected="selected"</s:if> >Yes</option>
 					</select>
 					<br/>Time Limit(MS):<input  id="time_limit" name="problem.time_limit" style="width: 48px;"  value="<s:property value="problem.time_limit"/>"/>&nbsp;&nbsp;Memory Limit(KB):<input  id="memory_limit" name="problem.memory_limit" style="width: 48px;"  value="<s:property value="problem.memory_limit"/>"/><br/>
+
+					OJ Name.<input  id="oj_name" name="problem.oj_name" style="width: 48px;"  value="<s:property value="problem.oj_name"/>"/>
+					OJ_PID.<input  id="oj_pid" name="problem.oj_pid" style="width: 48px;"  value="<s:property value="problem.oj_pid"/>"/>
+					Virtual Judge 
+					<select id="isvirtual"  style= "width:60px" name="problem.isvirtual">
+						<option value="0" <s:if test="problem.isvirtual==0">selected="selected"</s:if>>No</option>
+						<option value="1" <s:if test="problem.isvirtual==1">selected="selected"</s:if>>Yes</option>
+					</select>
+					<br>
 					</center>
 					<h5>
 					Title:

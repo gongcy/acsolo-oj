@@ -15,7 +15,10 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 	<meta http-equiv="keywords" content="GUET,ACM,OnlineJudge,JAVA,C++,Program Contest">
 	<meta http-equiv="description" content="GuiLin University of Electronic Technology Online Judge System fof ACM">
-
+ 	<link href="css/styles.css" type="text/css" rel="stylesheet">
+ 	<link href="css/jquery-ui.css" rel="stylesheet" type="text/css"/>
+ 	  	<script type="text/javascript" src="js/jquery-1.7.1.js"></script>
+  	<script type="text/javascript" src="js/gdoj.js"></script>
   </head>
   
   <body>

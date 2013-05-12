@@ -200,6 +200,7 @@
         <to  type = "forward">/postmessage</to>
     </outbound-rule>
     
+
     <rule>
        <note>problemset </note>  
         <from>/problemset$</from>  
@@ -216,18 +217,20 @@
     </rule>
     <rule>
        <note>problemset?</note>  
-        <from>/problemset\?ORDER=([\a-zA-Z_]+)$</from>  
+        <from>/problemset\?ORDER=([\a-zA-Z_]{0,20})&amp;OJ=([\a-zA-Z_]{0,20})$</from>  
         <to>  
-            /problemset.action?order=$1
+            /problemset.action?order=$1&amp;ojName=$2
         </to>  
     </rule>
     <rule>
        <note>problemset/page/?</note>  
-        <from>/problemset/page/([0-9]+)\?ORDER=([\a-zA-Z_]+)$</from>  
+        <from>/problemset/page/([0-9]+)\?ORDER=([\a-zA-Z_]{0,20})&amp;OJ=([\a-zA-Z_]{0,20})$</from>  
         <to>  
-            /problemset.action?page=$1&amp;order=$2
+            /problemset.action?page=$1&amp;order=$2&amp;ojName=$3
         </to>  
     </rule>  
+    
+ 
     
      <rule>
        <note>problem/?</note>  

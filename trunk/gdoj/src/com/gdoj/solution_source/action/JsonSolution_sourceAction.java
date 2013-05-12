@@ -1,5 +1,6 @@
 package com.gdoj.solution_source.action;
 
+import java.io.File;
 import java.util.Date;
 
 import org.apache.struts2.json.annotations.JSON;
@@ -17,6 +18,8 @@ import com.gdoj.user.service.UserService;
 import com.gdoj.user.vo.User;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
+import com.util.Config;
+import com.util.StreamHandler;
 
 public class JsonSolution_sourceAction extends ActionSupport {
 
@@ -43,7 +46,15 @@ public class JsonSolution_sourceAction extends ActionSupport {
 	private String problemId;
 	private String className;
 	private String contestTitle;
+	private String judgeLog;
 	
+	public String getJudgeLog() {
+		return judgeLog;
+	}
+
+	public void setJudgeLog(String judgeLog) {
+		this.judgeLog = judgeLog;
+	}
 	
 	public String getClassName() {
 		return className;
@@ -100,9 +111,11 @@ public class JsonSolution_sourceAction extends ActionSupport {
 			
 			String username = (String)ActionContext.getContext().getSession().get("session_username");
 			if(username==null){
-				success=false;
-				error="You must <a href='enter'>Login</a> first.";
-				return SUCCESS;
+				//未登录，标记一下随便一个不可能的用户名
+				username = ".";
+				//success=false;
+				//error="You must <a href='enter'>Login</a> first.";
+				//return SUCCESS;
 			}
 
 			if(solution_.getContest_id()>0){
@@ -124,13 +137,43 @@ public class JsonSolution_sourceAction extends ActionSupport {
 						error="You can't view such source on a running contest.";
 						return SUCCESS;
 					}
+					judgeLog = "You can not view judge-log on a running contest.";
+				}else
+				{
+					try {
+						File file;
+						judgeLog = new String();
+						file = new File(Config.getValue("OJ_JUDGE_LOG") + "judge-log-"
+								+ solutionId + ".log");
+						judgeLog = StreamHandler.read(file);
+					} catch (Exception e) {
+						// TODO: handle exception
+					}
+				}
+			}else
+			{
+				try {
+					File file;
+					judgeLog = new String();
+					file = new File(Config.getValue("OJ_JUDGE_LOG") + "judge-log-"
+							+ solutionId + ".log");
+					judgeLog = StreamHandler.read(file);
+				} catch (Exception e) {
+					// TODO: handle exception
 				}
 			}
 
 			User user_ = new User();
 			user_ = userService.queryUser(solution_.getUsername());
 			if(user_!=null){
-				if(!username.equals(solution_.getUsername())){
+				if(!username.equals(solution_.getUsername())){					
+					if ("NO".equals(Config.getValue("OPENSOURCE")))
+					{
+						success=false;
+						error="This operation is now closed by Administrator.";
+						return SUCCESS;
+					}
+					
 					if(user_.getOpensource().equals("N")){
 						success=false;
 						error="This source isn't open for you.You can write mail to "+solution_.getUsername();
@@ -170,7 +213,7 @@ public class JsonSolution_sourceAction extends ActionSupport {
 			String className_[]={"cpp","cpp","cpp","cpp","java","csharp","fsharp","delphi","python","ruby","perl","lua","tcl","pike","haskell","php","bf","bf","go","scala","jscript","groovy"};
 
 			className = "brush:"+className_[solution.getLanguage()-1]+";";
-			
+
 			success = true;
 			return SUCCESS;
 		} catch (Exception e) {

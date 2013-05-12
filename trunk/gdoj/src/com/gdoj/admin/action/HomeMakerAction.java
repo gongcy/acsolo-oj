@@ -22,13 +22,21 @@ import com.util.freemarker.MyFreeMarker;
 public class HomeMakerAction extends ActionSupport {
 	private static final long serialVersionUID = 1L;
 	private String content;
-	
+	private String sidebar_content;
 	public String getContent() {
 		return content;
 	}
 
 	public void setContent(String content) {
 		this.content = content;
+	}
+
+	public String getSidebar_content() {
+		return sidebar_content;
+	}
+
+	public void setSidebar_content(String sidebarContent) {
+		sidebar_content = sidebarContent;
 	}
 
 	public String homemaker()throws Exception {
@@ -47,13 +55,31 @@ public class HomeMakerAction extends ActionSupport {
 				}				
 			}
 			
+			if(sidebar_content == null) {
+				sidebar_content = "";
+				try {
+					String path = ServletActionContext.getRequest()
+							.getSession().getServletContext().getRealPath("/");
+					//System.out.println(path+"WEB-INF\\templates\\homepage.html");
+					sidebar_content = StreamHandler.read(path
+							+ "WEB-INF\\templates\\sidebarex.html");
+				} catch (Exception e) {
+					// TODO: handle exception
+				}				
+			}
+
 			Map map = new HashMap();
-			map.put("content", content);		
+			map.put("content", content);	
 			String root = ServletActionContext.getRequest().getRealPath("/WEB-INF");
-						
-			
+									
 			MyFreeMarker.generator(root, "homepage.ftl", "homepage.html",
 					"content", map);
+			
+			Map map_sidebar = new HashMap();
+			map_sidebar.put("sidebar_content", sidebar_content);
+					
+			MyFreeMarker.generator(root, "sidebarex.ftl", "sidebarex.html",
+					"sidebar_content", map_sidebar);
 			
 		} catch (Exception e) {
 			// TODO: handle exception

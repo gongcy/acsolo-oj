@@ -34,6 +34,28 @@ public class Problem implements Serializable {
 	    private String tag;
 	    private Integer contest_id;
 	    
+	    private String oj_name;
+	    private Integer oj_pid;
+	    private Integer isvirtual;
+	    
+		public String getOj_name() {
+			return oj_name;
+		}
+		public void setOj_name(String ojName) {
+			oj_name = ojName;
+		}
+		public Integer getOj_pid() {
+			return oj_pid;
+		}
+		public void setOj_pid(Integer ojPid) {
+			oj_pid = ojPid;
+		}
+		public Integer getIsvirtual() {
+			return isvirtual;
+		}
+		public void setIsvirtual(Integer isvirtual) {
+			this.isvirtual = isvirtual;
+		}
 		public Integer getContest_id() {
 			return contest_id;
 		}
@@ -58,6 +80,9 @@ public class Problem implements Serializable {
 			this.difficulty = 0;
 			this.spj = 0;
 			this.create_date=new Date();
+			this.oj_name="GUET";
+			this.oj_pid = 0;
+			this.isvirtual = 0 ;
 			this.defunct = "N";
 		}
 		public Integer getProblem_id() {

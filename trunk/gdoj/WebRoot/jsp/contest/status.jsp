@@ -140,8 +140,16 @@ $(document).ready(function(){
 	            		<s:else>
 	            			<s:property value="%{getText('verdict'+solutionList[#st.index].verdict)}"/>
 	            			<s:if test="solutionList[#st.index].verdict==5"></s:if>
-	            			<s:elseif test="solutionList[#st.index].verdict==4"><span title="Running on test #<s:property value='testcase' default='1'/>">on test <s:property value="testcase" default="1"/></span></s:elseif>
-	            			<s:elseif test="solutionList[#st.index].verdict>5"><span title="Stop on test #<s:property value='testcase' default='1'/>">on test <s:property value="testcase" default="1"/></span></s:elseif>	            			
+	            			<s:elseif test="solutionList[#st.index].verdict==4">
+<s:if test="testcase>0">
+<span>on test <s:property value="testcase" default="1"/></span>
+</s:if>
+</s:elseif>
+	            			<s:elseif test="solutionList[#st.index].verdict>5">
+<s:if test="testcase>0">
+<span>on test <s:property value="testcase" default="1"/></span>
+</s:if>
+</s:elseif>	            			
 	            		</s:else>
 	            		<s:if test="timeOutList[#st.index]==1"><span style="color:red" title="Contest is ended."><sup>*</sup></span></s:if>	
 	            		</td>
@@ -166,7 +174,7 @@ var loader = "&nbsp; <img src='img/loader.gif' style='vertical-align: middle;'/>
                 			 var results = $('.verdict[status='+i+'][manual=0]').each(function(i, el){
                                 var zz = $(el).attr('id').substring(7);
                                 a.push( zz );
-                                $("#status_" + zz).html($("#status_" + zz).val()+loader);
+                                //$("#status_" + zz).html($("#status_" + zz).val()+"...");
                                 //$('#time_'+zz).html(loader);
                        	 	});
                 		} 
@@ -188,7 +196,13 @@ var loader = "&nbsp; <img src='img/loader.gif' style='vertical-align: middle;'/>
                                         $("#time_" + data.status[i].solutionId).html(data.status[i].time+" MS");
                                         $("#memory_" + data.status[i].solutionId).html(data.status[i].memory+" KB");
                                         if( data.status[i].verdictId >5 ){
-                                         		$("#status_" + data.status[i].solutionId).html(data.status[i].status_description+" on test "+data.status[i].testCase);
+if (data.status[i].testCase>0)
+{
+                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description +" on test "+data.status[i].testCase);
+}
+else{
+                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description);
+}
                                         		$("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_other');
                                         }
 					 					if(  data.status[i].verdictId == 5 ){
@@ -200,7 +214,13 @@ var loader = "&nbsp; <img src='img/loader.gif' style='vertical-align: middle;'/>
                                                $("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_pe');
                                         }
                                         if( data.status[i].verdictId == 4 ){
-                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description +" on test "+data.status[i].testCase+loader);
+if (data.status[i].testCase>0)
+{
+                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description +" on test "+data.status[i].testCase);
+}
+else{
+                                                $("#status_" + data.status[i].solutionId).html(data.status[i].status_description);
+}
                                                 $("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_prev');
                                               //  $("#time_" + data.status[i].solutionId).html( loader );
                                                 
@@ -211,7 +231,7 @@ var loader = "&nbsp; <img src='img/loader.gif' style='vertical-align: middle;'/>
                                               $("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_ce');
                                         }
  										if( data.status[i].verdictId < 3 ){
-                                         	   $("#status_" + data.status[i].solutionId).html(data.status[i].status_description+loader);
+                                         	   $("#status_" + data.status[i].solutionId).html(data.status[i].status_descriptio);
                                                $("#status_" + data.status[i].solutionId).attr('class', 'verdict verdict_prev');
                                             //   $("#time_" + data.status[i].solutionId).html( loader );
                                         }                                       
@@ -294,6 +314,13 @@ $(document).ready(function(){
 		            opt+="</pre><br>";
 		           	//alert(opt);
        				$(".pop-div .pop-div-source").html(opt);
+       				
+       				opt="<h5>Judge Log:</h5><br>" ;
+       				opt+="<pre class='prettyprint'>";
+       				opt+=json.judgeLog;
+		            opt+="</pre><br>";
+       				
+       				$(".pop-div .pop-div-judgelog").html(opt);
        				prettyPrint();	
 	 
        		 }); 
@@ -337,12 +364,14 @@ $(document).ready(function(){
 	  	 <p class="pop-div-note"></p>	 
 		 <p class="pop-div-content"></p>
 		 <div class="pop-div-source"></div>
+		  <div class="pop-div-judgelog"></div>
 		 </div>
 		 <script type="text/javascript">
 			 $(document).ready(function() {	 
 			 	$("a.close").click(function(){
 			 		$(".pop-div p.pop-div-content").html(""); 
 				    $(".pop-div .pop-div-source").html(""); 
+				     $(".pop-div .pop-div-judgelog").html("");
 			 		 $(".pop-div").fadeOut(); 
 			 	});
 

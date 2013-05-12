@@ -76,5 +76,14 @@
          <property name="contest_id" type="java.lang.Integer">
             <column name="contest_id" not-null="false" />
         </property>
+        <property name="oj_name" type="java.lang.String">
+            <column name="oj_name" length="255" not-null="false" />
+        </property>
+         <property name="oj_pid" type="java.lang.Integer">
+            <column name="oj_pid" not-null="false" />
+        </property>
+        <property name="isvirtual" type="java.lang.Integer">
+            <column name="isvirtual" not-null="false" />
+        </property>
     </class>
 </hibernate-mapping>

@@ -138,10 +138,6 @@ $(document).ready(function() {
 				</h5>
 					<s:property value="problem.hint" default="null" escape="false"/>
 				<h5>
-					Source:
-				</h5>
-					<s:property value="problem.source" default="null" escape="false"/>
-				<h5>
 					Author:
 				</h5>
 					<s:property value="problem.author" default="null" escape="false"/>

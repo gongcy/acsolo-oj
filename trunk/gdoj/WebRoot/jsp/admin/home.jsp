@@ -18,14 +18,7 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 	<link href="css/styles.css" type="text/css" rel="stylesheet">
   	<script type="text/javascript" src="js/jquery-1.7.1.js"></script>
   	<script type="text/javascript" src="js/gdoj.js"></script>
-<link type="text/css" rel="stylesheet" href="js/ckeditor/plugins/syntaxhighlight/styles/shCore.css"/>
-<link type="text/css" rel="stylesheet" href="js/ckeditor/plugins/syntaxhighlight/styles/shThemeDefault.css"/>
-<script type="text/javascript" src="js/ckeditor/plugins/syntaxhighlight/scripts/shCore.js"></script>
-<script type="text/javascript" src="js/ckeditor/plugins/syntaxhighlight/scripts/shBrushes.js"></script>
-<script type="text/javascript">
-SyntaxHighlighter.config.clipboardSwf = 'js/ckeditor/plugins/syntaxhighlight/scripts/clipboard.swf';
-SyntaxHighlighter.all();
-</script>  
+
 
 </head>
   
@@ -52,8 +45,11 @@ SyntaxHighlighter.all();
 	     	<div>	
 				  <div class="comment " style="position: relative;padding: 6px;">
 				  <form action="admin/homemaker.action" method="post">	     																								  			
+								Home Page:<br>
 								<textarea class="message-content" id="home-content" name="content" rows="20" ><s:property value="content"/></textarea>	
-							                    	
+							    <br>
+							    Sidebar:<br>
+							    <textarea class="message-content" id="sidebar-content" name="sidebar_content" rows="20" ><s:property value="sidebar_content"/></textarea>	               	
 		                    	<div style="text-align: center;margin-top: 12px;">
 								<input class="" type="submit" value="Post" >
 								<input class="" type="reset" value="Reset" >
@@ -200,6 +196,24 @@ KE.plugin['quote'] = {
 $(document).ready(function(){
 	KE.show({
 		id : 'home-content',
+		resizeMode : 1,
+		shadowMode : false,
+		allowPreviewEmoticons : false,
+		allowUpload : true,
+		syncType : 'auto',
+		urlType : 'domain',
+		cssPath : 'css/ke-oj.css',
+	
+		items : [
+				 'bold', 'italic', 'underline', 'strikethrough','subscript','superscript', 'removeformat','|','textcolor', 'bgcolor',  
+				 'title', 'fontname', 'fontsize',  '|', 
+				 'justifyleft', 'justifycenter', 'justifyright', 'insertorderedlist', 'insertunorderedlist', 'indent', 'outdent', '|', 
+				 'link', 'unlink', 'emoticons','code', 'image', 'quote', '|','source' ,'about'
+				 ]
+	});
+	
+	KE.show({
+		id : 'sidebar-content',
 		resizeMode : 1,
 		shadowMode : false,
 		allowPreviewEmoticons : false,

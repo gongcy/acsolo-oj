@@ -40,15 +40,22 @@ public class ProblemListAction extends ActionSupport{
 	private TagsviewService tagsviewService ;
 	private Map<Integer,List<String>> tagsList;
 	
+	private String ojName;
 	
-	
-	
+	public String getOjName() {
+		return ojName;
+	}
+
+	public void setOjName(String ojName) {
+		this.ojName = ojName;
+	}
+
 	public String problemSet()throws Exception {
 		try {
 			if (pageSize > 100) {
 				pageSize = 100;
 			}		
-			intRowCount = problemService.countProblems("user");
+			intRowCount = problemService.countProblems("user", ojName);
 			pageCount = ((intRowCount + pageSize - 1) / pageSize);//计算出总页数
 			
 			if (page < 1) {
@@ -59,9 +66,7 @@ public class ProblemListAction extends ActionSupport{
 			}
 			Integer from = (page - 1) * pageSize;
 			
-			//System.out.println(order);
-			
-			problemList = problemService.queryProblems(from, pageSize, order,"user");
+			problemList = problemService.queryProblems(from, pageSize, order, ojName, "user");
 			
 			//user solved?
 			String username = (String)ActionContext.getContext().getSession().get("session_username");

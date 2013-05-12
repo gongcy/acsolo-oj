@@ -4,6 +4,7 @@ import info.monitorenter.cpdetector.io.CodepageDetectorProxy;
 import info.monitorenter.cpdetector.io.JChardetFacade;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -283,6 +284,41 @@ public class Tools {
 		}
 	}
 	
+	 public static void  excuteCommand(String command)
+	    {
+	    
+	        Runtime r = Runtime.getRuntime();
+	        Process p;
+	            try {
 
+	                p = r.exec(command);
+	                BufferedReader br = new BufferedReader(new InputStreamReader(p
+	                        .getInputStream()));
+	                String inline;
+	                while ((inline = br.readLine()) != null) {
+	                    System.out.println(inline);
+	                    
+	                }
+	                br.close();
+	            } catch (IOException e) {
+	                // TODO Auto-generated catch block
+	                e.printStackTrace();
+	            }
 
+	    }
+
+	    public static void main(String[] args) throws IOException {
+	    	String content = "d:\n cd oj\n call judge-all.exe";
+	    	StreamHandler.write("c://tmp.bat", content);
+		/*	String[] cmd={"c://tmp.bat","1"};  
+			try {			
+				Runtime.getRuntime().exec(cmd);	
+			} catch (IOException e) {	
+				e.printStackTrace();
+			}
+			*/
+	    	
+	    	excuteCommand("c://tmp.bat");
+		    //setValue("OJ_PATH","D\:\\OJ\\");
+	    }
 }

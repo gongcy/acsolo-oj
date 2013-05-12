@@ -208,12 +208,4 @@ $(document).ready(function() {
 	</div>
 </div>
 
-<div align=center><!-- behavior=alternate 
-  		<marquee scrollamount=3 width=70% scrolldelay=30  onMouseOver="javascript:this.stop();" 
-  			onMouseOut="javascript:this.start();"> 
-  			<b style="margin-right:20px"> 	
-  			 <a href="contests">Online Contest Round #5 Div.2 is Coming at 2012-3-9 19:00-22:00,please pay attention.Register Contest before Enter.</a>
-  			</b>
-	</marquee> -->
-</div>
 

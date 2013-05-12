@@ -49,6 +49,7 @@ public class ProblemShowAction extends ActionSupport{
 				}
 			}
 			
+			//System.out.print("Show Problem: " + problem.getOj_name());
 			
 		} catch (Exception e) {
 			// TODO: handle exception

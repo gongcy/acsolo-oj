@@ -42,7 +42,7 @@ SyntaxHighlighter.all();
 	            <div class="top-link" style="border-bottom: 1px solid #b9b9b9;">
 	            	<div class="title-sidebox" style="width: 100%"><s:text name="sidebar.statistic"/></div>
 	            </div>  
-	            <div class="" style="margin: 6px;font-size: 12px;">
+	            <div class="" style="margin: 6px;font-size: 12px; font-family:Consolas;">
         			Solved user(s):<a href="problemset/status/problem/<s:property value="problem.problem_id" default="0"/>/page/1"><s:property value="problem.solved" default="0"/></a> &nbsp;&nbsp;<br/>
         			Submit user(s):<a href="problemset/status/problem/<s:property value="problem.problem_id" default="0"/>/page/1"><s:property value="problem.submit_user" default="0"/></a><br/>
         			Submission(s) :<a href="problemset/status/problem/<s:property value="problem.problem_id" default="0"/>/page/1"><s:property value="problem.submit" default="0"/></a><br/>
@@ -95,48 +95,48 @@ SyntaxHighlighter.all();
 						<s:property value="problem.title"/>
 					</h3>
 					<s:if test="problem.spj!=0"><span style="color:red;font-size:11px;"><b>Special Judge</b></span><br></s:if>
-					Time Limit:<s:property value="problem.time_limit" default="0"/>MS&nbsp;&nbsp;Memory Limit:<s:property value="problem.memory_limit" default="0"/>KB<br/>
-					
+					Time Limit:<s:property value="problem.time_limit" default="0"/>MS&nbsp;&nbsp;Memory Limit:<s:property value="problem.memory_limit" default="0"/>KB<br/>					
+					<s:if test="problem.isvirtual!=0"><span style="color:red;font-size:11px;"><b>This problem will be judged on <s:property value="problem.oj_name"/></b></span><br></s:if>
 				</div>
 				<div class="probleminfo" style="padding:0px 12px 12px 0px;">
 				<h5>
 					Description:
 				</h5>
-					<s:property value="problem.description" default="null" escape="false"/>
+					<s:property value="problem.description" default="" escape="false"/>
 				<h5>
 					Input:
 				</h5>
-					<s:property value="problem.input" default="null" escape="false"/>
+					<s:property value="problem.input" default="" escape="false"/>
 				<h5>
 					Output:
 				</h5>
-					<s:property value="problem.output" default="null" escape="false"/>
+					<s:property value="problem.output" default="" escape="false"/>
 				<h5>
 				Sample test:
 				</h5>
 					<div class="sample-test">
 						<div class="input"><div class="title">Input</div>
-						<div class="sample-input"><s:property value="problem.sample_input" default="null" escape="false"/></div>
+						<div class="sample-input"><s:property value="problem.sample_input" default="" escape="false"/></div>
 						</div>					
 						<div class="output"><div class="title">Output</div>
-						<div class="sample-output"><s:property value="problem.sample_output" default="null" escape="false"/></div>
+						<div class="sample-output"><s:property value="problem.sample_output" default="" escape="false"/></div>
 						</div>
 					</div>				
 				<h5>
 					Note:
 				</h5>
-					<s:property value="problem.hint" default="null" escape="false"/>
+					<s:property value="problem.hint" default="" escape="false"/>
 				<h5>
 					Source:
 				</h5>
-					<s:property value="problem.source" default="null" escape="false"/>
+					<s:property value="problem.source" default="" escape="false"/>
 				<h5>
 					Author:
 				</h5>
-					<s:property value="problem.author" default="null" escape="false"/>
+					<s:property value="problem.author" default="" escape="false"/>
 				</div>	
 			</blockquote>	
-				<div style="margin-right: 12px;text-decoration: none;">
+				<div style="margin-right: 12px;text-decoration: NULL">
 					<div class="left"></div>
 					<div class="right">
 					</div>

@@ -2,6 +2,7 @@ package com.gdoj.solution.dao;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import org.hibernate.Query;
@@ -80,7 +81,25 @@ public class SolutionDaoImpl extends HibernateDaoSupport implements SolutionDAO 
 		 }
 		 return list;*/
 	}
-	public List<Integer> getBydaily(){
+	
+	/*
+	 * 
+	 date往前size个单位	
+	 */
+	public List<Integer> getBydaily(Date date, Integer size){
+		
+		/*
+		 * 	Calendar和Date的转化
+
+			(1) Calendar转化为Date
+			Calendar cal=Calendar.getInstance();
+			Date date=cal.getTime();
+			
+			(2) Date转化为Calendar
+			Date date=new Date();
+			Calendar cal=Calendar.getInstance();
+			cal.setTime(date);
+		 */
 	    Session session = HibernateSessionFactory.getSession();
 		session.beginTransaction();
 	    List<Integer> list =new ArrayList<Integer>(0);
@@ -89,8 +108,13 @@ public class SolutionDaoImpl extends HibernateDaoSupport implements SolutionDAO 
 		String maxTime=new String();
 		String minTime=new String();
 		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(date);
 		
 		calendar.add(Calendar.DATE, 1);    //得到明天日期
+	//	System.out.println(calendar.getTime().toString());
+		calendar.set(calendar.get(Calendar.YEAR),calendar.get(Calendar.MONTH),calendar.get(Calendar.DATE),0,0,0);
+	//	System.out.println(calendar.getTime().toString());
+
 		int year = calendar.get(Calendar.YEAR);
 		int month = calendar.get(Calendar.MONTH)+1;
 		int day =calendar.get(Calendar.DATE);
@@ -101,7 +125,7 @@ public class SolutionDaoImpl extends HibernateDaoSupport implements SolutionDAO 
 		String sql=new String();
 		
 		//calendar.add(Calendar.MONTH, -1);//得到前一个月
-		for(int i=0;i<30;i++){
+		for(int i=0;i<size;i++){
 			maxTime=minTime;
 			calendar.add(Calendar.DATE, -1);    //得到前一天
 			int year1 = calendar.get(Calendar.YEAR);
@@ -112,11 +136,12 @@ public class SolutionDaoImpl extends HibernateDaoSupport implements SolutionDAO 
 			Query query=session.createQuery(sql);
 			int n = ((Long)query.list().get(0)).intValue();
 			list.add(n);
+			
 			//System.out.println(minTime+" ~ "+maxTime+" = "+n);
 		}
 		return list;
 	}
-	public List<Integer> getBymonthly(){
+	public List<Integer> getBymonthly(Date date, Integer size){
 		 Session session = HibernateSessionFactory.getSession();
 			session.beginTransaction();
 		    List<Integer> list =new ArrayList<Integer>(0);
@@ -124,11 +149,12 @@ public class SolutionDaoImpl extends HibernateDaoSupport implements SolutionDAO 
 			String maxTime=new String();
 			String minTime=new String();
 			Calendar calendar = Calendar.getInstance();
+			calendar.setTime(date);
 			
 			calendar.add(Calendar.MONTH, 1);
+			calendar.set(calendar.get(Calendar.YEAR),calendar.get(Calendar.MONTH),1,0,0,0);
 			int year = calendar.get(Calendar.YEAR);
 			int month = calendar.get(Calendar.MONTH)+1;
-			int day =calendar.get(Calendar.DATE);
 			
 			maxTime=year+"-"+month+"-"+"01";
 			minTime=maxTime;
@@ -136,17 +162,17 @@ public class SolutionDaoImpl extends HibernateDaoSupport implements SolutionDAO 
 			String sql=new String();
 
 			//calendar.add(Calendar.MONTH, -1);//得到前一个月
-			for(int i=0;i<12;i++){
+			for(int i=0;i<size;i++){
 				maxTime=minTime;
 				calendar.add(Calendar.MONTH, -1);    //得到前一月
 				int year1 = calendar.get(Calendar.YEAR);
 				int month1 = calendar.get(Calendar.MONTH)+1;
-				int day1 =calendar.get(Calendar.DATE);
 				minTime=year1+"-"+month1+"-"+"01";
 				sql="select count(s.solution_id) from Solution s where s.submit_date between '"+minTime+"' and '"+maxTime+"'";
 				Query query=session.createQuery(sql);
 				int n = ((Long)query.list().get(0)).intValue();
 				list.add(n);
+				
 				//System.out.println(minTime+" ~ "+maxTime+" = "+n);
 			}
 			return list;

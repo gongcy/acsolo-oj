@@ -21,7 +21,15 @@ public class ProblemListAction extends ActionSupport{
 	private Integer pageSize=100;
 	private Integer intRowCount=0;
 	
+	private String ojName;
+	
+	public String getOjName() {
+		return ojName;
+	}
 
+	public void setOjName(String ojName) {
+		this.ojName = ojName;
+	}
 	private ProblemService problemService;
 
 	
@@ -32,7 +40,7 @@ public class ProblemListAction extends ActionSupport{
 				pageSize = 100;
 			}	
 			
-			intRowCount = problemService.countProblems("admin");
+			intRowCount = problemService.countProblems("admin",ojName);
 			
 			
 			Integer pageCount = ((intRowCount + pageSize - 1) / pageSize);//计算出总页数
@@ -47,7 +55,7 @@ public class ProblemListAction extends ActionSupport{
 			
 			
 			
-			problemList = problemService.queryProblems(from, pageSize, order,"admin");
+			problemList = problemService.queryProblems(from, pageSize, order,ojName,"admin");
 			
 			List<Integer> volume = new ArrayList<Integer>();
 			for (Integer i = 1; i <= pageCount; i++) {

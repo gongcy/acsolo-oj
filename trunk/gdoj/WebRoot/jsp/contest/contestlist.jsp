@@ -1,4 +1,4 @@
-<%@ page language="java" import="java.util.*" pageEncoding="UTF-8"%>
+﻿<%@ page language="java" import="java.util.*" pageEncoding="UTF-8"%>
 <%@taglib uri="/struts-tags" prefix="s"%>
 <%
 String path = request.getContextPath();
@@ -46,7 +46,7 @@ $(document).ready(function() {
 	            	2:Click <b><span style="font-size:10px;color:blue">Register contest.</span></b><br/>
 	            	3:You will see <b><span style="font-size:10px;color:red">Register success</span></b><br/>
 	            	4:After Running, click contest title.<br/>
-	            	<br/>
+
 	            	Any question,ask at <a href="topic">Topic</a>  
 	            	</span>			
 	            </div>
@@ -287,5 +287,8 @@ $(function() {
 	</div>   
     <jsp:include  page="/jsp/footer.jsp" ></jsp:include>
   </div>
+<!-- JiaThis Button BEGIN -->
+<script type="text/javascript" src="http://v3.jiathis.com/code/jiathis_r.js?uid=1339907478548202&type=left&amp;move=0" charset="utf-8"></script>
+<!-- JiaThis Button END -->
   </body>
 </html>
