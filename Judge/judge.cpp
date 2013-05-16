@@ -1,5 +1,3 @@
-#define _MT   //多线程，加了他才能用beginthread
-#define   _WIN32_WINNT     0x0500
 #include <windows.h>
 #include <process.h>
 #include <iostream>
@@ -24,6 +22,7 @@ using namespace std;
 
 #pragma comment(lib,"ws2_32")
 #pragma comment(lib, "lib/libmysql.lib")
+
 #define BUFSIZE 4096
 
 const int MAX_NAME = 30;
@@ -35,7 +34,7 @@ const int MAX_WAITTIME = 10000 ;
 
 MYSQL *mysql;     //mysql连接
 char query[1024]; //查询语句
-const char INI_filename[]="GDOJ\\data.ini";
+char INI_filename[]="GDOJ\\data.ini";
 char Mysql_url[255];
 char Mysql_username[255];
 char Mysql_password[255];
@@ -49,9 +48,13 @@ int isRestrictedFunction=0;
 int  limitJudge=20;  //裁判队列最大等待数量
 DWORD OutputLimit=10000; //最大输出
 char workPath[MAX_PATH];  //临时工作目录
+char judgeLogPath[MAX_PATH];
+int JUDGE_LOG_BUF_SIZE = 200;
 char dataPath[MAX_PATH];  //数据
 char logPath[MAX_PATH]="log\\";  //log
 char judgePath[MAX_PATH]; //judge.exe
+
+char judge_log_filename[MAX_PATH] = {0};
 
 int isTranscoding=0;   //针对VS的转码
 int limitIndex=1;    //时间限制倍数
@@ -73,6 +76,7 @@ char GL_languageExe[10]={0};
 int GL_time_limit;
 int GL_memory_limit;
 int GL_spj;
+
 char compileCmd_str[1024]={0};
 char runCmd_str[1024]={0};
 
@@ -106,18 +110,1137 @@ protected:
 private:
 };
 
+
+////////////// VJUDGE
+#include "pcre.h"
+#pragma comment(lib, "lib/pcre.lib") 
+
+#define MAX_SIZE_BUF 10000000
+
+#define DEBUG_PRINT(X)   X
+
+#define UCHAR unsigned char
+#define ULONG unsigned long
+#define CHAR char
+
+#define BOOL_TRUE 0
+#define BOOL_FALSE 1
+
+#define OVECCOUNT 30    /* should be a multiple of 3 */
+
+#define MAX_LANG_SIZE 255
+
+enum ENUM_PROVLEM
+{
+	PROBLEM_TIME = 0,
+	PROBLEM_MEMORY,
+	PROBLEM_TITLE,
+	PROBLEM_DESCRIPTION,
+	PROBLEM_INPUT,
+	PROBLEM_OUTPUT,
+	PROBLEM_SAMPLE_INPUT,
+	PROBLEM_SAMPLE_OUTPUT,
+	PROBLEM_AUTHOR,
+
+	PROBLEM_TAG_MAX
+};
+
+string g_problem_string[PROBLEM_TAG_MAX];
+char tmps[MAX_SIZE_BUF];
+
+/* hdu language list */
+UCHAR gaucLanguageName[][MAX_LANG_SIZE] = {
+	"G++",
+	"GCC",
+	"C++",
+	"C",
+	"Pascal",
+	"Java"
+};
+string GL_source;
+int GL_vjudge;
+int GL_vpid;
+
+#define UCHAR unsigned char
+#define ULONG unsigned long
+#define CHAR char
+
+#define BOOL_TRUE 0
+#define BOOL_FALSE 1
+
+/* HDU VJUDGE */
+
+char hdu_username[1000]="weizengke";
+char hdu_password[1000]="269574524";
+
+char tfilename[1000]="tmpfile.txt";
+
+#define DEBUG_OFF 0
+#define DEBUG_ON 1
+
+ULONG g_debug_switch = DEBUG_OFF;
+
+#define DEBUG (g_debug_switch == DEBUG_ON)?(1):(0)
+
+
+void set_debug_switch(ULONG ds)
+{
+	g_debug_switch = ds;
+}
+
+void MSG_OUPUT_DBG(const char *fmt, ...)
+{
+	va_list ap;
+	char buffer[4096];
+	time_t  timep = time(NULL);
+	int l;
+	struct tm *p;
+
+	if (DEBUG_OFF == DEBUG)
+	{
+		return;
+	}
+
+    p = localtime(&timep);
+    p->tm_year = p->tm_year + 1900;
+    p->tm_mon = p->tm_mon + 1;
+	
+	printf("%04d-%02d-%02d %02d:%02d:%02d ",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
+	
+	va_start(ap, fmt);
+	l = vsprintf(buffer, fmt, ap);
+
+	printf("%s\n", buffer);
+	va_end(ap);
+	
+}
+
+
+int read_buffer(const char *filename, char * buffer, int buf_size)
+{	
+	if (NULL == filename || NULL == buffer)
+	{
+		return 0;
+	}
+	FILE * fp=fopen(filename,"r");
+	char tmp[4096] = {0};
+	int size_tmp = 0;
+	char *buf = NULL;
+	
+	if (fp == NULL)
+	{
+		return 0;
+	}
+
+	buf = buffer;
+	while(fgets(tmp,4096 ,fp))
+	{
+
+		buf += sprintf(buf,"%s",tmp);
+		if (strlen(buffer) >= buf_size - 5)
+		{
+			sprintf(&buffer[buf_size - 5],"...");
+			break;
+		}
+	}
+
+	while (strlen(buffer) > 0 && buffer[strlen(buffer) - 1] == '\n')
+	{
+		buffer[strlen(buffer) - 1] = '\0';
+	}
+
+	fclose(fp);
+	return 0;
+}
+
+int reset_file(const char *filename)
+{
+	if (NULL == filename)
+	{
+		return 0;
+	}
+	FILE *fp = fopen(filename, "w");
+
+	if (fp == NULL)
+	{
+		return 0;
+	}
+
+	fprintf(fp,"");
+
+	fclose(fp);
+
+	return 0;
+}
+
+int write_buffer(const char *filename, const char *fmt, ...)
+{
+	va_list ap;
+	int l;
+	if (NULL == filename)
+	{
+		return 0;
+	}
+
+	FILE *fp = fopen(filename, "a+");
+	char buffer[40960] = {0};
+	if (fp == NULL)
+	{
+		return 0;
+	}
+
+	va_start(ap, fmt);
+	l = vsprintf(buffer, fmt, ap);
+	fprintf(fp, "%s", buffer);
+	va_end(ap);
+
+	fclose(fp);
+
+	return 0;
+}
+
+ULONG getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
+{
+	if (id < 0 || id >= sizeof(gaucLanguageName)/MAX_LANG_SIZE)
+	{
+		return BOOL_FALSE;
+	}
+
+	strcpy((char *)ucLanguageName, (char *)gaucLanguageName[id]);
+	return BOOL_TRUE;
+}
+
+ULONG getLanguageIDByName(UCHAR *ucLanguageName, ULONG *id)
+{
+	USHORT usLoop = 0;
+
+	for (usLoop = 0; usLoop <= sizeof(gaucLanguageName)/MAX_LANG_SIZE; ++usLoop)
+	{
+		if (strcmp((CHAR*)ucLanguageName, (CHAR*)gaucLanguageName[usLoop]) == 0)
+		{
+			*id = usLoop;
+			return BOOL_TRUE;
+		}
+	}
+	
+	return BOOL_FALSE;
+}
+
+bool isSpace(char c)
+{
+	if(c==' '||c=='\n'||c=='\t')
+	{
+		return true;
+	}
+	return false;
+}
+
+
+char dec2hexChar(short int n)
+{
+	if ( 0 <= n && n <= 9 ) return char( short('0') + n );
+	else if ( 10 <= n && n <= 15 )return char( short('A') + n - 10 );
+	else return char(0);
+}
+short int hexChar2dec(char c)
+{
+	if ( '0'<=c && c<='9' ) return short(c-'0');
+	else if ( 'a'<=c && c<='f' ) return ( short(c-'a') + 10 );
+	else if ( 'A'<=c && c<='F' ) return ( short(c-'A') + 10 );
+	else return -1;
+}
+
+string escapeURL(const string &URL)
+{
+	string result = "";
+	for ( unsigned int i=0; i<URL.size(); i++ )
+	{
+		char c = URL[i];
+		if (
+			( '0'<=c && c<='9' ) ||
+			( 'a'<=c && c<='z' ) ||
+			( 'A'<=c && c<='Z' ) ||
+			c=='/' || c=='.'
+			) result += c;
+		else {
+			int j = (short int)c;
+			if ( j < 0 ) j += 256;
+			int i1, i0;
+			i1 = j / 16;
+			i0 = j - i1*16;
+			result += '%';
+			result += dec2hexChar(i1);
+			result += dec2hexChar(i0);
+		}
+	}
+	return result;
+}
+
+string deescapeURL(const string &URL)
+{
+	string result = "";
+	for ( unsigned int i=0; i<URL.size(); i++ )
+	{
+		char c = URL[i];
+		if ( c != '%' ) result += c;
+		else {
+			char c1 = URL[++i];
+			char c0 = URL[++i];
+			int num = 0;
+			num += hexChar2dec(c1) * 16 + hexChar2dec(c0);
+			result += char(num);
+		}
+	}
+	return result;
+}
+
+
+
+string getAllFromFile(char *filename)
+{
+    string res="";
+    FILE * fp=fopen(filename,"r");
+    while (fgets(tmps,1000000,fp)) res+=tmps;
+    fclose(fp);
+    return res;
+}
+
+size_t process_data(void *buffer, size_t size, size_t nmemb, void *user_p)
+{
+	FILE *fp = (FILE *)user_p;
+	size_t return_size = fwrite(buffer, size, nmemb, fp);
+	//cout << (char *)buffer << endl;
+	return return_size;
+}
+
+#if 0
+ULONG login()
+{
+    FILE * fp=fopen(tfilename,"w+");
+	CURL *curl;
+	CURLcode res;
+
+    curl = curl_easy_init();
+
+	MSG_OUPUT_DBG("Do login...");
+    
+	if(curl)
+	{
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
+        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "hdu.cookie");
+        curl_easy_setopt(curl, CURLOPT_URL, "http://acm.hdu.edu.cn/userloginex.php?action=login");
+        string post=(string)"username="+hdu_username+"&userpass="+hdu_password+"&login=Sign+In";
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.c_str());
+		
+		res = curl_easy_perform(curl);
+
+		curl_easy_cleanup(curl);
+    }
+    
+	fclose(fp);
+
+    if (res) return BOOL_FALSE;
+
+    string ts=getAllFromFile(tfilename);
+    if (ts.find("No such user or wrong password.")!=string::npos)
+	{
+		MSG_OUPUT_DBG("Login failed.");
+		return BOOL_FALSE;
+	}
+    return BOOL_TRUE;
+}
+
+ULONG getSubmitError(char *filename, string &res)
+{
+	string ts;
+	res = "";
+    FILE * fp=fopen(filename,"r");
+	int begin_ = 0;
+	int end_ = 0;
+    while (fgets(tmps,1000000,fp))
+    {
+        ts=tmps;
+        if (ts.find("<form id=\"submit\" name=\"submit\"")!=string::npos)
+        {
+            while (fgets(tmps,1000000,fp))
+			{
+                ts=tmps;
+				begin_ = ts.find("<span>");
+                if (begin_!=string::npos)
+				{
+					//cout<<"Sorry! FOUND SUBMIT_INFO"<<endl;
+					end_ = ts.find("</span>");
+					if (end_ !=string::npos)
+					{
+						begin_ += 6;
+						res = ts.substr(begin_,end_ - begin_);
+						//cout<<res<<endl;
+						fclose(fp);
+						return BOOL_TRUE;
+					}
+					
+					while (fgets(tmps,1000000,fp))
+					{
+						ts=tmps;
+						end_ = ts.find("</span>");
+						if (end_ !=string::npos)
+						{
+							begin_ += 6;
+							res = ts.substr(begin_,end_ - begin_);
+							//cout<<res<<endl;
+							fclose(fp);
+							return BOOL_TRUE;
+						}
+						else
+						{
+							res=res+ts;
+						}
+					}
+					break;
+				}
+			}
+            break;
+        }
+    }
+    fclose(fp);
+    return BOOL_FALSE;
+}
+
+ULONG submit(string pid, string lang, string source)
+{
+	CURL *curl;
+	CURLcode res;
+	FILE * fp=fopen(tfilename,"w+");
+	if (NULL == fp)
+	{
+		MSG_OUPUT_DBG("Open %s failed...", tfilename);
+	}
+
+    curl = curl_easy_init();
+
+	headerlist=NULL;
+	static const char buf[] = "Expect:";
+	headerlist = curl_slist_append(headerlist, buf);
+
+	MSG_OUPUT_DBG("Do submit...");
+	MSG_OUPUT_DBG("Problem:%s, Language:%s ....", pid.c_str(), lang.c_str());
+
+	if (source.length() <= 50)
+	{
+		for (int i =0;i <= 50 - source.length() + 50; i++)
+		{
+			source += " \r\n";
+		}
+	}
+
+    if(curl)
+	{
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
+        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
+        curl_easy_setopt(curl, CURLOPT_URL, "http://acm.hdu.edu.cn/submit.php?action=submit");
+		
+		string post= (string)"check=0&problemid=" + pid + "&language=" + lang + "&usercode=" + escapeURL(source);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.c_str());
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
+
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+    }
+	
+	curl_slist_free_all (headerlist);
+    
+	fclose(fp);
+    
+	if (res)
+	{
+		MSG_OUPUT_DBG("curl_easy_perform failed...");
+		return BOOL_FALSE;
+	}
+
+    string tss=getAllFromFile(tfilename);
+    if (tss.find("Connect(0) to MySQL Server failed.")!=string::npos||tss.find("<b>One or more following ERROR(s) occurred.")!=string::npos||tss.find("<h2>The requested URL could not be retrieved</h2>")!=string::npos||tss.find("PHP: Maximum execution time of")!=string::npos) 
+	{
+		MSG_OUPUT_DBG("One or more ERROR(s) occurred.....");
+		return BOOL_FALSE;
+	}
+
+	MSG_OUPUT_DBG("Submit success...");
+	
+    return BOOL_TRUE;
+}
+#endif
+ULONG getResult(string s, string &res)
+{
+    int pos=s.find("<font color=");
+	if (-1 == pos)
+	{
+		return BOOL_FALSE;
+	}
+
+    while (s[pos]!='>') pos++;
+    pos++;
+
+    int st=pos;
+    while (s[pos]!='<') pos++;
+    res = s.substr(st,pos-st);
+
+	return BOOL_TRUE;
+}
+
+ULONG getRunid(string s, string &res) {
+    int pos=s.find("<td height=22px>");
+	if (-1 == pos)
+	{
+		return BOOL_FALSE;
+	}
+
+    while (s[pos]!='>') pos++;
+    pos++;
+
+    int st=pos;
+    while (s[pos]!='<') pos++;
+
+    res = s.substr(st,pos-st);
+	
+	return BOOL_TRUE;
+}
+
+
+string getCEinfo_brief(char *filename)
+{
+	string res="",ts;
+    FILE * fp=fopen(filename,"r");
+	
+    while (fgets(tmps,1000000,fp))
+    {
+        ts=tmps;
+        if (ts.find("View Compilation Error")!=string::npos)
+        {
+            while (fgets(tmps,1000000,fp))
+			{
+                ts=tmps;
+				int pos = ts.find("<pre>");
+                if (pos !=string::npos)
+				{
+					res = ts.substr(pos + 5, ts.length() - pos - 5);
+
+					while (fgets(tmps,1000000,fp))
+					{
+						ts=tmps;
+						if (ts.find("</pre>")!=string::npos)
+						{
+							MSG_OUPUT_DBG("FOUND CE_INFO");
+							break;
+						}	
+						else
+						{
+							res=res+ts;
+						}
+					}
+					break;
+				}
+			}
+            break;
+        }
+    }
+    fclose(fp);
+    return res;
+}
+#if 0
+string getCEinfo(string runid)
+{		
+	FILE *fp = fopen(tfilename, "ab+");	
+	CURL *curl;
+	CURLcode res;
+
+    curl = curl_easy_init();
+    if(curl)
+    {
+		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
+		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
+        string url=(string)"http://acm.hdu.edu.cn/viewerror.php?rid="+runid;
+        //cout<<url;
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+		
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+		
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+    }
+
+    fclose(fp);
+	
+    string info = getCEinfo_brief(tfilename);
+    return info;
+}
+#endif 
+
+ULONG getUsedTime(string s, string &timeuse)
+{
+    int pos=s.find("MS</td>");
+	if (-1 == pos)
+	{
+		return BOOL_FALSE;
+	}
+
+    int st=pos;
+    while (s[pos]!='>') pos--;
+    pos++;
+
+    timeuse =  s.substr(pos,st-pos);
+	return BOOL_TRUE;
+}
+
+ULONG getUsedMem(string s, string &memuse)
+{
+	int pos=s.find("K</td>");
+	if (-1 == pos)
+	{
+		return BOOL_FALSE;
+	}
+
+	int st=pos;
+	while (s[pos]!='>') pos--;
+	pos++;
+	memuse = s.substr(pos,st-pos);
+	return BOOL_TRUE;
+}
+
+string getLineFromFile(char *filename,int line)
+{
+    string res="";
+    FILE * fp=fopen(filename,"r");
+    int cnt=0;
+    while (fgets(tmps,10000000,fp))
+	{
+        cnt++;
+        res=tmps;
+        if (res.find("<h1>Realtime Status</h1>")!=string::npos)
+		{
+            fgets(tmps,10000000,fp);
+            res=res+tmps;
+            fgets(tmps,10000000,fp);
+            res=res+tmps;
+            break;
+        }
+    }
+    fclose(fp);
+    return res;
+}
+#if 0
+ULONG getStatus(string hdu_username, string pid,string lang, string &runid, string &result,string& ce_info,string &tu,string &mu)
+{
+    ULONG ulRet = BOOL_TRUE;
+    tu=mu="0";
+    string ts;
+
+	MSG_OUPUT_DBG("Do get status...");
+
+	CURL *curl;
+	CURLcode res;
+
+	curl = curl_easy_init();
+
+    if ( curl ) 
+	{
+		FILE *fp = fopen(tfilename, "ab+");	
+		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
+		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
+		char url[255] = {0};
+		sprintf(url, "http://acm.hdu.edu.cn/status.php?first=&pid=%s&user=%s&lang=&status=0", pid.c_str(), hdu_username.c_str());
+		
+		//MSG_OUPUT_DBG(url);
+		
+		curl_easy_setopt( curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+
+		res = curl_easy_perform( curl );
+		curl_easy_cleanup(curl);
+
+		fclose(fp);
+	}
+
+	ts = getLineFromFile(tfilename,77);
+	
+	if(BOOL_FALSE == getUsedTime(ts, tu))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getUsedTime failed.");
+	}
+
+    if(BOOL_FALSE == getUsedMem(ts, mu))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getUsedMem failed.");
+	}
+
+	if(BOOL_FALSE == getRunid(ts, runid))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getRunid failed.");
+	}
+
+	if(BOOL_FALSE == getResult(ts, result))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getResult failed.");
+	}
+
+	if (BOOL_TRUE != ulRet)
+	{
+		MSG_OUPUT_DBG("get record failed.");
+		return BOOL_FALSE;
+	}
+
+	MSG_OUPUT_DBG("problem:%s, language:%s, verdict:%s, submissionID:%s, time:%s ms, memory:%s kb\r\n", pid.c_str(), lang.c_str(), result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+
+	MSG_OUPUT_DBG("get status success...");
+
+	if (result.find("Compilation Error")!=string::npos)
+	{
+		//获取编译错误信息
+		string CE_Info = getCEinfo(runid);
+		ce_info = CE_Info;
+		//MSG_OUPUT_DBG(CE_Info.c_str());
+	}
+
+    return BOOL_TRUE;
+}
+#endif 
+
+////////////////////////////////////////
+//spider
+////////////////////////////////////////
+
+#define PCRE_STATIC // 静态库编译选项
+
+ULONG isNeed2HTML(ENUM_PROVLEM em)
+{
+	switch (em)
+	{
+		case PROBLEM_TIME:
+		case PROBLEM_MEMORY:
+		case PROBLEM_TITLE:
+		case PROBLEM_AUTHOR:
+			return BOOL_FALSE;
+		default:
+			return BOOL_TRUE;
+	}
+	return BOOL_TRUE;
+}
+
+#if 0
+void SQL_updateProblemInfo(string v_ojname, string v_pid)
+{
+	string val_str="";
+	/*
+	val_str = g_problem_string[0] + "," + g_problem_string[1]+ "," + "'" + g_problem_string[2] + "'" + "," + 
+	"'" + g_problem_string[3] + "'" + "," + "'" + g_problem_string[4] + "'" + "," + "'" + g_problem_string[5] + "'" + "," +
+	"'" + g_problem_string[6] + "'" + "," + "'" + g_problem_string[7] + "'" + "," + "'" + g_problem_string[8] + "'" + "," +
+	"'" + getCurrentTime() + "', 'N', 0,0,0,0,0,1, '" + v_ojname +"', " + v_pid + "";
+    */
+
+	MSG_OUPUT_DBG("In SQL_updateProblemInfo, (%s)", v_pid.c_str());
+
+	for(int i=0; i<PROBLEM_TAG_MAX; i++)
+	{
+		
+		//char *end;
+		//char *string_ = (char*)malloc(sizeof(char)*g_problem_string[i].length()+1);
+
+		//strcpy(string_,g_problem_string[i].c_str());
+		/*
+		end = string_;
+		end += strlen(string_);                //point sql tail
+		//convert NUL(ASCII 0)、'\n'、'\r'、'\'’、'''、'"'和Control-Z and so on
+		*end++ = '\'';
+		end += mysql_real_escape_string(mysql, end, query, strlen(string_));
+		*end++ = '\"';
+	    *end++ = ')';
+		
+		cout<<string_<<endl;
+		*/
+
+		if (i == PROBLEM_TITLE)
+		{
+			replace_all_distinct(g_problem_string[i], "\"", " ");
+			g_problem_string[i] = "HDU." + v_pid + " - " + g_problem_string[i];
+		}
+
+		if (BOOL_TRUE == isNeed2HTML((ENUM_PROVLEM)i))
+		{
+			replace_all_distinct(g_problem_string[i], "\"", "&quot;");
+			replace_all_distinct(g_problem_string[i], "src=/data/images/", "src=http://acm.hdu.edu.cn/data/images/");
+			replace_all_distinct(g_problem_string[i], "src=../../data/images/", "src=http://acm.hdu.edu.cn/data/images/");
+			replace_all_distinct(g_problem_string[i], "\n", "<br>");
+		}
+		//val_str += g_problem_string[i];
+	}
+
+	val_str = g_problem_string[0] + "," + g_problem_string[1]+ "," + "\"" + g_problem_string[2] + "\"" + "," + 
+		"\"" + g_problem_string[3] + "\"" + "," + "\"" + g_problem_string[4] + "\"" + "," + "\"" + g_problem_string[5] + "\"" + "," +
+		"\"" + g_problem_string[6] + "\"" + "," + "\"" + g_problem_string[7] + "\"" + "," + "\"" + g_problem_string[8] + "\"" + "," +
+		"'" + getCurrentTime() + "', 'N', 0,0,0,0,0,0,1, '" + v_ojname +"', " + v_pid + "";
+
+	if (val_str.length() >= MAX_SIZE_BUF)
+	{
+		MSG_OUPUT_DBG("ERROR, too large size of buffer...");
+		return;
+	}
+
+	sprintf(query,"insert into problem(time_limit,memory_limit,title,description,input,output,sample_input,sample_output,author,create_date,defunct,spj,accepted,solved,submit,submit_user,contest_id,isvirtual,oj_name,oj_pid) values(%s);",val_str.c_str());
+
+	//MSG_OUPUT_DBG(query);
+
+	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));	  
+	if(ret)
+	{			  
+		//write_log(ERROR,mysql_error(mysql));
+		MSG_OUPUT_DBG(mysql_error(mysql));
+		return ;	
+	}	
+
+	MSG_OUPUT_DBG("End SQL_updateProblemInfo OK, (%s)", v_pid.c_str());
+}
+#endif
+
+ULONG checkStringExsit(char *filename, char *pattern)
+{
+    pcre  *re;    
+    const char *error;    
+    int  erroffset;    
+    int  ovector[OVECCOUNT];    
+    int  rc;    
+	
+	string ts;
+    FILE * fp=fopen(filename,"r");
+	
+    while (fgets(tmps, MAX_SIZE_BUF, fp))
+    {
+        ts +=tmps;
+    }
+
+    fclose(fp);
+
+	//title
+	re = pcre_compile(pattern, 0, &error, &erroffset, NULL);         
+    if (re == NULL) {                 //如果编译失败，返回错误信息    
+        MSG_OUPUT_DBG("PCRE compilation failed at offset %d: %s\n", erroffset, error);    
+        return BOOL_FALSE;    
+    }    
+	
+    rc = pcre_exec(re,NULL, ts.c_str(), strlen(ts.c_str()), 0, 0, ovector, OVECCOUNT);    
+	// 返回值：匹配成功返回非负数，没有匹配返回负数    
+    if (rc < 0) {                     //如果没有匹配，返回错误信息    
+        if (rc == PCRE_ERROR_NOMATCH) printf("Sorry, no match ...\n");    
+        else MSG_OUPUT_DBG("Matching error %d\n", rc);    
+        pcre_free(re);    
+        return BOOL_FALSE;    
+    }
+	
+	pcre_free(re); 
+	
+	return BOOL_TRUE;
+}
+
+ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
+{
+    pcre  *re;    
+    const char *error;    
+    int  erroffset;    
+    int  ovector[OVECCOUNT];    
+    int  rc, i;    
+   
+	MSG_OUPUT_DBG("In getInfoByTag...");
+
+	//title
+	re = pcre_compile(pattern, 0, &error, &erroffset, NULL);         
+    if (re == NULL) {                 //如果编译失败，返回错误信息    
+        MSG_OUPUT_DBG("PCRE compilation failed at offset %d: %s\n", erroffset, error);    
+        return BOOL_FALSE;    
+    }    
+
+    rc = pcre_exec(re,NULL, src, strlen(src), 0, 0, ovector, OVECCOUNT);    
+	// 返回值：匹配成功返回非负数，没有匹配返回负数    
+    if (rc < 0) {                     //如果没有匹配，返回错误信息    
+		if (rc == PCRE_ERROR_NOMATCH) MSG_OUPUT_DBG("Sorry, no match ...\n");    
+		else {
+			MSG_OUPUT_DBG("Matching error %d\n", rc);  
+			g_problem_string[enProblem] = "Not Found";
+		}
+		pcre_free(re);    
+		return BOOL_FALSE;    
+	}
+
+	MSG_OUPUT_DBG("In getInfoByTag...");
+
+	i = (rc==0)?(0):(rc-1);
+
+	printf("iiiiiiii=%d , rc=%d\n",i,rc);
+
+//	for (i = 0; i < rc; i++) //分别取出捕获分组 $0整个正则公式 $1第一个()  
+	{               
+        char *substring_start =  src + ovector[2*i];    
+        int substring_length = ovector[2*i+1] - ovector[2*i];    
+        	MSG_OUPUT_DBG("In getInfoByTag 1 substring_length=%d...",substring_length);
+		char *str_tmp = (char*)malloc(sizeof(char)*substring_length+100);
+		//	char str_tmp[MAX_SIZE_BUF] ={0};
+			MSG_OUPUT_DBG("In getInfoByTag 2...");
+		sprintf(str_tmp, "%.*s\n", substring_length, substring_start); 	
+		 
+			MSG_OUPUT_DBG("In getInfoByTag 3...");
+		
+		//	printf("%s",str_tmp);
+
+		//string string_ = str_tmp;		
+			MSG_OUPUT_DBG("In getInfoByTag 4...(length = %d)", strlen(str_tmp));
+
+			g_problem_string[enProblem].assign(str_tmp,strlen(str_tmp));
+
+			MSG_OUPUT_DBG("End getInfoByTag success...");
+
+		//MSG_OUPUT_DBG(pattern);
+		//MSG_OUPUT_DBG(string_.c_str());
+		//	free(substring_start);
+			free(str_tmp);
+    }   
+
+
+	pcre_free(re); 
+	
+	return BOOL_TRUE;
+}
+
+int getProblemInfo_Brief(string pid)    
+{    
+	ULONG ulRet = 0;
+	int loop = 0;
+	string res="",ts;
+    FILE * fp=fopen(tfilename,"r");
+	
+    while (fgets(tmps, MAX_SIZE_BUF, fp))
+    {
+        ts +=tmps;
+    }
+    fclose(fp);
+
+	char  patternTime [] = "(\\d*) MS";  // 将要被编译的字符串形式的正则表达式    
+
+	char  patternMemory [] = "(\\d*) K";  // 将要被编译的字符串形式的正则表达式    
+
+	char  patternTitle [] = "<h1 style='color:#1A5CC8'>([\\s\\S]*?)</h1>";  // 将要被编译的字符串形式的正则表达式    
+    
+	char  patternDescription [] = "Problem Description</div> <div class=panel_content>([\\s\\S]*?)</div><div class=panel_bottom>&nbsp;</div>";  // 将要被编译的字符串形式的正则表达式    
+    
+	char  patternInput [] = "Input</div> <div class=panel_content>([\\s\\S]*?)</div><div class=panel_bottom>&nbsp;</div>";  // 将要被编译的字符串形式的正则表达式    
+    
+	char  patternOutput [] = "Output</div> <div class=panel_content>([\\s\\S]*?)</div><div class=panel_bottom>&nbsp;</div>";  // 将要被编译的字符串形式的正则表达式    
+    
+	char  patternSampleInput [] = "Sample Input</div><div class=panel_content><pre><div style=\"font-family:Courier New,Courier,monospace;\">([\\s\\S]*?)</div></pre></div><div class=panel_bottom>&nbsp;</div>";  // 将要被编译的字符串形式的正则表达式    
+	
+	char  patternSampleOutput [] = "Sample Output</div><div class=panel_content><pre><div style=\"font-family:Courier New,Courier,monospace;\">([\\s\\S]*?)</div></pre></div><div class=panel_bottom>&nbsp;</div>";  // 将要被编译的字符串形式的正则表达式    
+    
+	char  patternAuthor [] = "Author</div> <div class=panel_content>([\\s\\S]*?)</div><div class=panel_bottom>&nbsp;</div>";  // 将要被编译的字符串形式的正则表达式    
+    
+	//char  patternTitle [] = "<h1 style='color:#1A5CC8'>([\\s\\S]*?)</h1>";  // 将要被编译的字符串形式的正则表达式    
+    
+
+	for (loop = 0; loop < PROBLEM_TAG_MAX; loop++)
+	{
+		g_problem_string[loop] = "";
+	}
+
+	MSG_OUPUT_DBG("Start Problem %s ...", pid.c_str());
+
+	MSG_OUPUT_DBG("Time");
+	ulRet = getInfoByTag((char*)ts.c_str(), patternTime, PROBLEM_TIME ,NULL);
+	if(ulRet == 0)
+	{
+		g_problem_string[0] = "1000";
+	}
+	MSG_OUPUT_DBG("Memoty");
+	ulRet = getInfoByTag((char*)ts.c_str(), patternMemory, PROBLEM_MEMORY, NULL);
+	if(ulRet == 0)
+	{
+		g_problem_string[1] = "65535";
+	}
+
+	ulRet = 0;
+
+	MSG_OUPUT_DBG("Title");
+	ulRet += getInfoByTag((char*)ts.c_str(), patternTitle, PROBLEM_TITLE,NULL);
+
+	MSG_OUPUT_DBG("Description");
+	ulRet += getInfoByTag((char*)ts.c_str(), patternDescription, PROBLEM_DESCRIPTION, NULL);
+
+	MSG_OUPUT_DBG("Input");	
+	ulRet += getInfoByTag((char*)ts.c_str(), patternInput, PROBLEM_INPUT, NULL);	
+
+	MSG_OUPUT_DBG("Output");	
+	ulRet += getInfoByTag((char*)ts.c_str(), patternOutput, PROBLEM_OUTPUT, NULL);	
+
+	MSG_OUPUT_DBG("Sample Input");	
+	ulRet += getInfoByTag((char*)ts.c_str(), patternSampleInput, PROBLEM_SAMPLE_INPUT, NULL);	
+
+	MSG_OUPUT_DBG("Sample Output");	
+	ulRet += getInfoByTag((char*)ts.c_str(), patternSampleOutput, PROBLEM_SAMPLE_OUTPUT, NULL);
+
+	MSG_OUPUT_DBG("Author");	
+	ulRet += getInfoByTag((char*)ts.c_str(), patternAuthor, PROBLEM_AUTHOR, NULL);
+
+	if (ulRet != 0)
+	{
+		if (BOOL_TRUE == checkStringExsit(tfilename, "No such problem"))
+		{
+			MSG_OUPUT_DBG("No such problem %s", pid.c_str());
+
+			return 0;
+		}
+	}
+
+	//SQL_updateProblemInfo("HDU",pid);
+
+	MSG_OUPUT_DBG("Get Problem %s OK.", pid.c_str());
+
+    return 0;    
+}    
+
+#if 0
+ULONG getProblemInfo(string pid)
+{
+	CURL *curl;
+    CURLcode res;
+    
+	curl = curl_easy_init();
+	
+	if (access(tfilename, 0) == 0)
+	{
+		DeleteFile(tfilename);
+	}
+
+    if ( curl ) {
+		FILE *fp = fopen(tfilename, "ab+");	
+		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
+		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
+		char url[255] = {0};
+		sprintf(url, "http://acm.hdu.edu.cn/showproblem.php?pid=%s", pid.c_str());
+		//cout<<url;
+		curl_easy_setopt( curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+		
+		res = curl_easy_perform( curl );
+		curl_easy_cleanup(curl);
+		fclose(fp);
+	}
+	
+	getProblemInfo_Brief(pid);
+	
+	return BOOL_TRUE;
+}
+#endif
+
+//////////////////
+// DLL exp
+//////////////////
+
+
+ULONG DLL_HDU_SpiderInit(int pid)
+{
+	if (access(tfilename, 0) == 0)
+	{
+		DeleteFile(tfilename);
+	}
+
+	return BOOL_TRUE;
+}
+
+#if 0
+ULONG DLL_GetProblemInfoFromHDU(int pid)
+{
+	char tmp[10]={0};
+	itoa(pid,tmp,10);
+	string pid_s = tmp;
+
+	if (BOOL_TRUE != getProblemInfo(pid_s))
+	{
+		return BOOL_FALSE;
+	}
+
+	return BOOL_TRUE;
+}
+
+
+ULONG DLL_HDULogin()
+{
+	if (BOOL_TRUE != login())
+	{
+		return BOOL_FALSE;
+	}
+	
+	return BOOL_TRUE;
+}
+
+ULONG DLL_HDUSubmit(int pid, int langid, string source)
+{
+	char tmp[10]={0};
+	itoa(pid,tmp,10);
+	string pid_s = tmp;
+	
+	char tmplang[10]={0};
+	itoa(langid,tmplang,10);
+	string lang_string = tmplang;
+	
+	if (BOOL_TRUE != submit(pid_s, lang_string, source))
+	{
+		return BOOL_FALSE;
+	}
+	return BOOL_TRUE;
+}
+
+ULONG DLL_HDUGetStatus(string hdu_username, int pid, int langid, string &runid, string &result,string& ce_info,string &tu,string &mu)
+{
+	char tmp[10]={0};
+	itoa(pid,tmp,10);
+	string pid_s = tmp;
+	//string runid,result,ce_info,tu, mu;
+
+	char tmplang[10]={0};
+	itoa(langid,tmplang,10);
+	string lang_string = tmplang;
+	
+	if (BOOL_TRUE != getStatus(hdu_username, pid_s, lang_string, runid, result, ce_info, tu, mu))
+	{
+		MSG_OUPUT_DBG("DLL_HDUGetStatus getStatus error...");
+		return BOOL_FALSE;
+	}
+	else
+	{
+		MSG_OUPUT_DBG("DLL_HDUGetStatus getStatus success...");
+	}
+
+	return BOOL_TRUE;
+}
+
+#endif
+
+ULONG DLL_HDUDebugSwitch(ULONG st)
+{
+	set_debug_switch(st);
+
+	return BOOL_TRUE;
+}
+
+
+/* END HDU VJUDGE */
+
+
 /////////////////////////LOG
 //#define LOG(level) Log(__FILE__, __LINE__, level).GetStream()
-
-
-string GetLocalTimeAsString(const char* format) {
-	time_t t = time(NULL);
-	struct tm *p;
-	p = localtime(&t);
-	char buf[1024];
-	strftime(buf, sizeof(buf), format, p);
-	return buf;
-}
 
 void write_log(int level, const char *fmt, ...) {
 	va_list ap;
@@ -250,10 +1373,13 @@ void InitMySqlConfig(){
 	isDeleteTemp=GetPrivateProfileInt("Tool","DeleteTemp",0,INI_filename);  
 	limitJudge=GetPrivateProfileInt("Tool","LimitJudge",20,INI_filename);
 	OutputLimit=GetPrivateProfileInt("Tool","OutputLimit",10000,INI_filename);
+	JUDGE_LOG_BUF_SIZE=GetPrivateProfileInt("Tool","JUDGE_LOG_BUF_SIZE",500,INI_filename);
+
 	isRestrictedFunction=GetPrivateProfileInt("Tool","isRestrictedFunction",0,INI_filename);
 	GetPrivateProfileString("Tool","WorkingPath","",workPath,sizeof(workPath),INI_filename);
 	GetPrivateProfileString("Tool","DataPath","",dataPath,sizeof(dataPath),INI_filename);
 	GetPrivateProfileString("Tool","JudgePath","",judgePath,sizeof(judgePath),INI_filename);
+	GetPrivateProfileString("Tool","JudgeLogPath","",judgeLogPath,sizeof(judgeLogPath),INI_filename);
 
 	GetPrivateProfileString("MySQL","url","",Mysql_url,sizeof(Mysql_url),INI_filename);
 	GetPrivateProfileString("MySQL","username","",Mysql_username,sizeof(Mysql_username),INI_filename);
@@ -261,22 +1387,14 @@ void InitMySqlConfig(){
 	GetPrivateProfileString("MySQL","table","",Mysql_table,sizeof(Mysql_table),INI_filename);
 	Mysql_port=GetPrivateProfileInt("MySQL","port",0,INI_filename);
 
-
+	GetPrivateProfileString("HDU","username","",hdu_username,sizeof(hdu_username),INI_filename);
+	GetPrivateProfileString("HDU","password","",hdu_password,sizeof(hdu_password),INI_filename);
 //  	
 	write_log(INFO,"socketPort:%d, DataPath:%s, TempPath:%s",port,dataPath,workPath);
- 	//cout<<"MySQL:"<<Mysql_url<<" "<<Mysql_username<<" "<<Mysql_password<<" "<<Mysql_table<<" "<<Mysql_port<<endl;
-
+ 	cout<<"MySQL:"<<Mysql_url<<" "<<Mysql_username<<" "<<Mysql_password<<" "<<Mysql_table<<" "<<Mysql_port<<endl;
+	//printf("HDU VJUDGE: username:%s , password: %s\n",hdu_username,hdu_password);
 }
-//字符串替换所有old_value->new_value
-string&  replace_all_distinct(string&   str,const   string&   old_value,const   string&   new_value)   
-{   
-	for(string::size_type   pos(0);   pos!=string::npos;   pos+=new_value.length())   {   
-		if(   (pos=str.find(old_value,pos))!=string::npos   )   
-			str.replace(pos,old_value.length(),new_value);   
-		else   break;   
-	}   
-	return   str;   
-}   
+
 
 void InitPath() 
 {
@@ -291,8 +1409,7 @@ void InitPath()
 	sprintf(keyname,"Language%d",GL_languageId);
 	
 	GetPrivateProfileString("Language",keyname,"",GL_languageName,100,INI_filename);
-	
-	
+		
 	//sprintf(keyname,"%s",GL_languageName);
 	
 	GetPrivateProfileString("LanguageExt",GL_languageName,"",GL_languageExt,10,INI_filename);
@@ -350,6 +1467,12 @@ void InitPath()
 	sprintf(DebugFile,"%s%s.txt",workPath,name.c_str()); //debug文件路径
 	sprintf(ErrorFile,"%s%s_re.txt",workPath,name.c_str()); //re文件路径
 	
+	if( (_access(judgeLogPath, 0 )) == -1 )   {
+		CreateDirectory(judgeLogPath,NULL);
+	}
+
+	sprintf(judge_log_filename,"%sjudge-log-%d.log",judgeLogPath,GL_solutionId);
+
 	//	cout<<DebugFile<<endl;
 }
 
@@ -384,6 +1507,10 @@ int SQL_getSolutionSource(){
 	}
 
 	fprintf(fp_source, "%s", code);
+	
+	/* add for vjudge*/
+	string code_ = code;
+	GL_source = code_;
 
 	mysql_free_result(recordSet);
 	fclose(fp_source);
@@ -424,7 +1551,7 @@ int SQL_getSolutionInfo(){
 
 int SQL_getProblemInfo(){//time_limit,memory_limit,spj
 	
-	sprintf(query,"select time_limit,memory_limit,spj from problem where problem_id=%d",GL_problemId);
+	sprintf(query,"select time_limit,memory_limit,spj,isvirtual,oj_pid from problem where problem_id=%d",GL_problemId);
 
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));	  
 	if(ret){			  
@@ -443,6 +1570,8 @@ int SQL_getProblemInfo(){//time_limit,memory_limit,spj
 		GL_time_limit=atoi(row[0]);
 		GL_memory_limit=atoi(row[1]);		
 		GL_spj=atoi(row[2]);
+		GL_vjudge=atoi(row[3]);
+		GL_vpid=atoi(row[4]);
 	}
 	
 	mysql_free_result(recordSet);//释放结果集
@@ -896,7 +2025,7 @@ BOOL RUN_existException(DWORD dw){
 HANDLE G_job=NULL;
 HANDLE InputFile ;  //父进程输入文件句柄
 HANDLE OutputFile;  //子进程标准输出句柄
-DWORD dw_code;	//定义进程状态
+DWORD g_dwCode;	//定义进程状态
 
 HANDLE CreateSandBox(){
 	HANDLE hjob =CreateJobObject(NULL,NULL);
@@ -945,11 +2074,11 @@ bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p){
 	if(AssignProcessToJobObject(job,p.hProcess))
 	{
 		//顺便调整本进程优先级为高
-		HANDLE   hPS   =   OpenProcess(PROCESS_ALL_ACCESS,   false,  p.dwProcessId); 
+		/*HANDLE   hPS   =   OpenProcess(PROCESS_ALL_ACCESS,   false,  p.dwProcessId); 
 		if(!SetPriorityClass(hPS,   HIGH_PRIORITY_CLASS)){
 			write_log(SYSTEM_ERROR,"SetPriorityClass        [Error:%d]\n",GetLastError());
 		}
-		CloseHandle(hPS);
+		CloseHandle(hPS);*/
 		return true;
 	}
 	else
@@ -1060,13 +2189,12 @@ DWORD WINAPI RUN_ProgramThread(LPVOID lp) //ac
 	return 0;
 }
 
-//spj死循环风险、崩溃风险||应做时间限制
 int special_judge(const char *inFile,const char *uOutFile){ //return 0 ====Error,return 1 ====Accepted
 	int judge ;
 	char spj_path[MAX_PATH];
 	sprintf(spj_path,"%s%d\\spj_%d.exe %s %s",dataPath,GL_problemId,GL_problemId,inFile,uOutFile);
 	judge = system(spj_path) ;
-	//cout<<judge<<endl;
+
 	if (judge == -1){
 		//printf("system error!") ;
 		return 0;
@@ -1077,10 +2205,15 @@ int special_judge(const char *inFile,const char *uOutFile){ //return 0 ====Error
 	return 0;
 }
 
-int RUN_solution(int solutionId){ //有跳过测试样例的风险
+int RUN_solution(int solutionId)
+{ 
 	long caseTime=0;
 	int i,case_;
-	dw_code=0;
+	char srcPath[MAX_PATH];
+	char ansPath[MAX_PATH];
+	char buf[40960];
+
+	g_dwCode=0;
 
 	for(i=0;;++i){
 		if(i==0){
@@ -1090,7 +2223,9 @@ int RUN_solution(int solutionId){ //有跳过测试样例的风险
 		}
 		sprintf(inFileName,"%s%d\\data%d.in",dataPath,GL_problemId,case_);   
 		sprintf(outFileName,"%s%d%_%d.out",workPath,solutionId,case_);
-		
+		sprintf(srcPath, "%s",outFileName);
+		sprintf(ansPath, "%s%d\\data%d.out",dataPath,GL_problemId,case_);
+
 		if( (_access(inFileName, 0 )) == -1 )   {
 			write_log(INFO,"Test over..");
 			break ;
@@ -1119,9 +2254,6 @@ int RUN_solution(int solutionId){ //有跳过测试样例的风险
 		if(InputFile!=NULL) CloseHandle(InputFile);
 		if(OutputFile!=NULL) CloseHandle(OutputFile);
 		
- 
-		
-
 		//get memory info
 		PROCESS_MEMORY_COUNTERS   pmc; 
 		unsigned long tmp_memory=0;
@@ -1131,13 +2263,13 @@ int RUN_solution(int solutionId){ //有跳过测试样例的风险
 		}
 
 		//get process state
-		GetExitCodeProcess(G_pi.hProcess, &dw_code);
-		if(RUN_existException(dw_code))//是否在运行中出现"常见"异常，若存在，修正评判结果为Runtime error	
+		GetExitCodeProcess(G_pi.hProcess, &g_dwCode);
+		if(RUN_existException(g_dwCode))
 		{
 			GL_verdictId=V_RE;
 			goto l;
 		}
-		else if(dw_code==STILL_ACTIVE)
+		else if(g_dwCode==STILL_ACTIVE)
 		{	//超时	
 			puts("TIME LIMIT");
 			TerminateProcess(G_pi.hProcess, 0); 
@@ -1183,15 +2315,64 @@ int RUN_solution(int solutionId){ //有跳过测试样例的风险
 			if(verdict_) GL_verdictId=V_AC;
 			else GL_verdictId=V_WA;
 		}else{
-			char srcPath[MAX_PATH];
-			char ansPath[MAX_PATH];
-			sprintf(srcPath, "%s",outFileName);
-			sprintf(ansPath, "%s%d\\data%d.out",dataPath,GL_problemId,case_);
 			GL_verdictId = compare(srcPath,ansPath);
 		}
 		
-l:		write_log(INFO,"ID:%d Test%d ,%s ,%dms %dkb ,Return code:%u",GL_solutionId,i,VERDICT_NAME[GL_verdictId],caseTime,tmp_memory,dw_code);
+l:		write_log(INFO,"ID:%d Test%d ,%s ,%dms %dkb ,Return code:%u",GL_solutionId,i,VERDICT_NAME[GL_verdictId],caseTime,tmp_memory,g_dwCode);
 		
+		/* write judge-log */
+
+		if (i == 0)
+		{
+			reset_file(judge_log_filename);
+			if (GL_verdictId!=V_AC)
+			{
+				i  = 1;
+				write_buffer(judge_log_filename,"Test: #%d, time: %d ms, memory: %d kb, exit code: %d,verdict: %s",
+					i,GL_time-GL_time%10,tmp_memory,g_dwCode,VERDICT_NAME[GL_verdictId]);
+				
+				memset(buf,0,sizeof(buf));
+				read_buffer(inFileName, buf, JUDGE_LOG_BUF_SIZE);
+				write_buffer(judge_log_filename,"\nInput\n",i);
+				write_buffer(judge_log_filename,buf);
+
+				memset(buf,0,sizeof(buf));
+				read_buffer(outFileName, buf, JUDGE_LOG_BUF_SIZE);
+				write_buffer(judge_log_filename,"\nOutput\n",i);
+				write_buffer(judge_log_filename,buf);
+				
+				memset(buf,0,sizeof(buf));
+				read_buffer(ansPath, buf, JUDGE_LOG_BUF_SIZE);
+				write_buffer(judge_log_filename,"\nAnswer\n");
+				write_buffer(judge_log_filename,buf);
+
+				write_buffer(judge_log_filename,"\n------------------------------------------------------------------\n");
+				break;
+			}
+		}
+		else
+		{
+			write_buffer(judge_log_filename,"Test: #%d, time: %d ms, memory: %d kb, exit code: %d,verdict: %s",
+				i,caseTime - caseTime%10,tmp_memory,g_dwCode,VERDICT_NAME[GL_verdictId]);
+
+			memset(buf,0,sizeof(buf));
+			read_buffer(inFileName, buf, JUDGE_LOG_BUF_SIZE);
+			write_buffer(judge_log_filename,"\nInput\n");
+			write_buffer(judge_log_filename,buf);
+
+			memset(buf,0,sizeof(buf));
+			read_buffer(outFileName, buf, JUDGE_LOG_BUF_SIZE);
+			write_buffer(judge_log_filename,"\nOutput\n");
+			write_buffer(judge_log_filename,buf);
+
+			memset(buf,0,sizeof(buf));
+			read_buffer(ansPath, buf, JUDGE_LOG_BUF_SIZE);
+			write_buffer(judge_log_filename,"\nAnswer\n");
+			write_buffer(judge_log_filename,buf);
+
+			write_buffer(judge_log_filename,"\n------------------------------------------------------------------\n");
+		}
+
 		if(GL_verdictId!=V_AC){
 			break;
 		}
@@ -1215,62 +2396,285 @@ void resetVal(){
 	GL_testcase=0;
 }
 
+/*
+HDU 支持的语言
+char gaucLanguageName[][255] = {
+	"G++",
+	"GCC",
+	"C++",
+	"C",
+	"Pascal",
+	"Java"
+};
+*/
+int getHDULangID(int GDOJlangID)
+{
+	int alang[25] = {0,2,3,0,1,5,0,0,4,0,0,0};
+
+	return alang[GDOJlangID];
+}
+
+int Judge_Local()
+{
+	char buf[4096] = {0};
+	write_log(INFO,"Start Compile...");
+
+	if(0 == compile())
+	{
+		write_log(INFO,"Compile Error...");
+		GL_verdictId=V_CE;
+		SQL_updateCompileInfo(GL_solutionId);
+
+		reset_file(judge_log_filename);
+
+		write_buffer(judge_log_filename,"Test: #1, time: 0 ms, memory: 0 kb, exit code: 0,verdict: %s\n",VERDICT_NAME[GL_verdictId]);
+	}
+	else
+	{
+		write_log(INFO,"Start Run...");
+		RUN_solution(GL_solutionId);
+	}
+
+	return BOOL_TRUE;
+}
+
+/* HDU Virtual Judge */
+
+ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string &result,string& ce_info,string &tu,string &mu)
+{
+	ULONG ulRet = BOOL_TRUE;
+	tu=mu="0";
+	string ts;
+
+	MSG_OUPUT_DBG("Do get status...");
+
+	ts = getLineFromFile(tfilename,77);
+
+	if(BOOL_FALSE == getUsedTime(ts, tu))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getUsedTime failed.");
+	}
+
+	if(BOOL_FALSE == getUsedMem(ts, mu))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getUsedMem failed.");
+	}
+
+	if(BOOL_FALSE == getRunid(ts, runid))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getRunid failed.");
+	}
+
+	if(BOOL_FALSE == getResult(ts, result))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getResult failed.");
+	}
+
+	MSG_OUPUT_DBG("problem:%d, language:%d, verdict:%s, submissionID:%s, time:%s ms, memory:%s kb\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+
+	if (BOOL_TRUE != ulRet)
+	{
+		MSG_OUPUT_DBG("get record failed.");
+		return BOOL_FALSE;
+	}
+
+	MSG_OUPUT_DBG("get status success...");
+
+	return BOOL_TRUE;
+}
+
+int Judge_Remote()
+{
+	char current_path[MAX_PATH] = {0};
+	char tmp_source_path[MAX_PATH] = {0};
+	char tmp_return_path[MAX_PATH] = {0};
+	GetCurrentDirectory(sizeof(current_path),current_path);
+
+	sprintf(tmp_source_path, "%s//%s",current_path,sourcePath);
+	sprintf(tmp_return_path, "%s//OJ_TMP//hdubjudge-%d.tmp",current_path,GL_solutionId);
+
+	strcpy(tfilename,tmp_return_path);
+
+	do 
+	{
+		int lang_id = getHDULangID(GL_languageId);
+
+		char cmd_string[MAX_PATH];
+		sprintf(cmd_string,"python -O hdu-vjudge.py submit %d %d %s %s %s %s",
+				GL_vpid, lang_id, hdu_username, hdu_password, tmp_source_path,tmp_return_path);
+		system(cmd_string) ;		
+
+		int tryTime = 6;
+		int ret = BOOL_FALSE;
+		string runid, result,ce_info,tu,mu;
+
+		//hdu 的status多1
+		lang_id += 1;
+
+		while (ret != BOOL_TRUE)
+		{
+			result = "";
+			puts("Get Status...");
+
+			Sleep(10000);
+
+			sprintf(cmd_string,"python -O hdu-vjudge.py status %d %d %s %s",
+				GL_vpid, lang_id , hdu_username,tmp_return_path);
+
+			system(cmd_string) ;
+
+			ret =getHDUStatus(hdu_username, GL_vpid, lang_id, runid, result,ce_info,tu,mu);
+
+			if (result.find("Queuing")!=string::npos 
+				|| result.find("Compiling")!=string::npos
+				|| result.find("Running")!=string::npos)
+			{
+				puts("Get Status, Queuing or Compiling or Running , try again...");
+				ret = BOOL_FALSE;
+			}
+
+			if (result.find("Compilation Error")!=string::npos)
+			{
+				//获取编译错误信息
+				sprintf(cmd_string,"python -O hdu-vjudge.py ce %s %s",runid.c_str(), tmp_return_path);
+				system(cmd_string) ;	
+
+				string CE_Info = getCEinfo_brief(tfilename);
+				ce_info = CE_Info;
+				//MSG_OUPUT_DBG(CE_Info.c_str());
+			}
+
+			tryTime --;
+			/* 循环等待60s */
+			if (0 == tryTime)
+			{
+				break;
+			}
+		}
+
+		if (BOOL_FALSE == ret)
+		{
+			puts("Get Status Error...");
+			GL_verdictId = V_SE;
+		}
+		else
+		{
+			puts("Get Status success...");
+			if (result.find("Accepted")!=string::npos)
+			{
+				GL_verdictId = V_AC;
+			}
+			else if (result.find("Presentation Error")!=string::npos)
+			{
+				GL_verdictId = V_PE;
+			}
+			else if (result.find("Runtime Error")!=string::npos)
+			{
+				GL_verdictId = V_RE;
+			}
+			else if (result.find("Time Limit Exceeded")!=string::npos)
+			{
+				GL_verdictId = V_TLE;
+			}
+			else if (result.find("Memory Limit Exceeded")!=string::npos)
+			{
+				GL_verdictId = V_TLE;
+			}
+			else if (result.find("Output Limit Exceeded")!=string::npos)
+			{
+				GL_verdictId = V_OLE;
+			}
+			else if (result.find("Wrong Answer")!=string::npos)
+			{
+				GL_verdictId = V_WA;
+			}		
+			else if (result.find("Compilation Error")!=string::npos)
+			{
+				GL_verdictId = V_CE;
+				FILE *fp;
+				char buffer[4096]={0};
+				if ((fp = fopen (DebugFile, "w")) == NULL){
+					write_log(ERROR,"DebugFile open error");
+					break;
+				}
+				fputs(ce_info.c_str(),fp);
+				fclose(fp);
+				SQL_updateCompileInfo(GL_solutionId);
+			}
+			else
+			{
+				GL_verdictId = V_SE;
+			}
+		}
+
+		GL_time = atoi(tu.c_str());
+		GL_memory = atoi(mu.c_str());
+
+	} while (0);
+
+	DeleteFile(tmp_return_path);
+	
+	return BOOL_TRUE;
+}
+
 int work(int solutionId){  //开始工作
 	
 	GL_solutionId = solutionId;
 
 	resetVal();//重置
-
 	SQL_getSolutionInfo();
-
 	InitPath();  //包含sourcePath,所以在SQL_getSolutionSource之前
-
 	SQL_getSolutionSource();  //取出source，并保存到sourcePath
-
 	SQL_getProblemInfo();	//problem info
 
-	GL_time_limit*=limitIndex;
-	GL_memory_limit*=limitIndex;
+	
 
-	//write_log(INFO,"Time_Limit:%d ms , Memory_Limit:%d kb",GL_time_limit,GL_memory_limit);
+	if (1 == GL_vjudge)
+	{
+		(void)Judge_Remote();
+		g_dwCode = 0;		
+		GL_testcase = 0;
+	}
+	else
+	{
+		GL_time_limit*=limitIndex;
+		GL_memory_limit*=limitIndex;
+		(void)Judge_Local();
 
-	//compile
-	write_log(INFO,"Start Compile...");
-
-	if(0==compile()){
-		//compile error...
-		write_log(INFO,"Compile Error");
-		GL_verdictId=V_CE;
-		SQL_updateCompileInfo(GL_solutionId);
-	}else{
-		//start run
-		write_log(INFO,"Start Run...");
-		RUN_solution(GL_solutionId);
 	}
 
 	string time_string_;
 	API_TimeToString(time_string_,GL_submitDate);
 	//update MySQL............
-	write_log(INFO,"ID:%d ->Rusult:%s Case:%d %dms %dkb ,Return code:%u at %s by %s",GL_solutionId,VERDICT_NAME[GL_verdictId],GL_testcase,GL_time-GL_time%10,GL_memory,dw_code,time_string_.c_str(),GL_username);
+	write_log(INFO,"ID:%d ->Rusult:%s Case:%d %dms %dkb ,Return code:%u at %s by %s",GL_solutionId,VERDICT_NAME[GL_verdictId],GL_testcase,GL_time-GL_time%10,GL_memory,g_dwCode,time_string_.c_str(),GL_username);
 	SQL_updateSolution(GL_solutionId,GL_verdictId,GL_testcase,GL_time-GL_time%10,GL_memory);
 	SQL_updateProblem(GL_problemId);
 	SQL_updateUser(GL_username);
 
 	//contest or not 
-	if(GL_contestId>0){ 
-
-		time_t contest_s_time,contest_e_time;
+	if(GL_contestId > 0)
+	{ 
 		//contest judge
+		time_t contest_s_time,contest_e_time;
 		char num[10]={0};  
-		SQL_getProblemInfo_contest(GL_contestId,GL_problemId,num);  //获取contest problem题目标号
+
+		/* 获取contest problem题目标号 */
+		SQL_getProblemInfo_contest(GL_contestId,GL_problemId,num);  
 		SQL_getContestInfo(GL_contestId,contest_s_time,contest_e_time);
-		if(contest_e_time>GL_submitDate){  //比赛running ，修改Attend
+		
+		if(contest_e_time>GL_submitDate)
+		{  
+			/* 比赛running ，修改Attend */
 			SQL_updateAttend_contest(GL_contestId,GL_verdictId,GL_problemId,num,GL_username,contest_s_time,contest_e_time);
 		}
+
 		SQL_updateProblem_contest(GL_contestId,GL_problemId);
 	}
 
-	//删除文件
 	DeleteFile(sourcePath);
 	DeleteFile(DebugFile);
 	DeleteFile(exePath);
@@ -1337,15 +2741,17 @@ long WINAPI ExceptionFilter(EXCEPTION_POINTERS * lParam)
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
-int main(int argc, char **argv)
+int OJ_main(int argc, char **argv)
 {
-
-	SetUnhandledExceptionFilter(ExceptionFilter);
- 	SetErrorMode(SEM_NOGPFAULTERRORBOX ); 
-	
-	if( (_access(logPath, 0 )) == -1 )   {
-		CreateDirectory(logPath,NULL);
+	if (argc > 1)
+	{
+		strcpy(INI_filename,argv[1]);
 	}
+
+
+	//关闭调试开关
+	DLL_HDUDebugSwitch(1);
+
 	write_log(INFO,"===>Running Judge Core<===");
 	InitMySqlConfig();
 	if(InitMySQL()==0){//初始化mysql
@@ -1357,6 +2763,7 @@ int main(int argc, char **argv)
 		write_log(ERROR,"Init Socket ERROR...");
 		return 0;
 	}
+
 	//创建工作线程
 	HANDLE hThreadW;
 	hThreadW=CreateThread(NULL,NULL,WorkThread,0,0,0);
@@ -1365,11 +2772,25 @@ int main(int argc, char **argv)
 
 	write_log(INFO,"End of initialization...");
 
-	while(TRUE){
+	while(TRUE)
+	{
 		Sleep(1);
 	}
-	write_log(ERROR,"Crash!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
 	closesocket(sListen);
 	WSACleanup();
+}
+
+int main(int argc, char **argv)
+{
+	SetUnhandledExceptionFilter(ExceptionFilter);
+ 	SetErrorMode(SEM_NOGPFAULTERRORBOX ); 
+	
+	if( (_access(logPath, 0 )) == -1 )   {
+		CreateDirectory(logPath,NULL);
+	}
+
+	(void)OJ_main(argc,argv);
+
 	return 0;
 }

@@ -4,7 +4,9 @@
 #include <iostream>
 #include <string>
 #include <time.h>
+#include  <io.h>
 using namespace std;
+
 
 
 int isInFile(const char fname[]) ;
@@ -17,5 +19,9 @@ int StringToTimeEX(const string &strDateStr,time_t &timeData);
 int API_TimeToString(string &strDateStr,const time_t &timeData);
 long getdiftime(time_t maxt,time_t mint);
 
+string GetLocalTimeAsString(const char* format);
+string getCurrentTime();
+
+string&  replace_all_distinct(string&   str,const   string&   old_value,const   string&   new_value);
 
 #endif /* __UTIL_H__ */
