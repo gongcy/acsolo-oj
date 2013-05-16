@@ -22,7 +22,7 @@
 #define V_OOC 13
 #define V_SE 14
 
-static const char* VERDICT_NAME[] = {"ALL", "Queuing", "Compiling", "CE", "Running","AC","WA","RE","TLE","MLE","PE","OLE","RF","OOC","SE"};
+static const char* VERDICT_NAME[] = {"ALL", "QUEUING", "COMPILING", "CE", "RUNNING","AC","WA","RE","TLE","MLE","PE","OLE","RF","OOC","SE"};
 
 #define SYSTEM_ERROR 0
 #define WARNING 1
@@ -34,3 +34,4 @@ static const char* LEVEL_NAME[] = {"SYSTEM_ERROR", "WARNING", "ERROR", "FATAL", 
 
 static int DEBUG = 1;
 
+//#define JUDGE_LOG_BUF_SIZE 200

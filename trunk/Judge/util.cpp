@@ -4,6 +4,7 @@
 
 using namespace std;
 
+
 int isInFile(const char fname[]) {
 	int l = strlen(fname);
 	if (l <= 3 || strcmp(fname + l - 3, ".in") != 0)
@@ -188,3 +189,35 @@ long getdiftime(time_t maxt,time_t mint)  //获取时间差 返回秒数
 {
 	return (long)difftime(maxt,mint);
 }
+
+string GetLocalTimeAsString(const char* format) {
+	time_t t = time(NULL);
+	struct tm *p;
+	p = localtime(&t);
+	char buf[1024];
+	strftime(buf, sizeof(buf), format, p);
+	return buf;
+}
+
+string getCurrentTime()
+{
+	time_t s_t;
+	string time_string; 
+
+	time(&s_t);
+	API_TimeToString(time_string,s_t);
+
+	return time_string;
+}
+
+
+//字符串替换所有old_value->new_value
+string&  replace_all_distinct(string&   str,const   string&   old_value,const   string&   new_value)   
+{   
+	for(string::size_type   pos(0);   pos!=string::npos;   pos+=new_value.length())   {   
+		if(   (pos=str.find(old_value,pos))!=string::npos   )   
+			str.replace(pos,old_value.length(),new_value);   
+		else   break;   
+	}   
+	return   str;   
+}   
