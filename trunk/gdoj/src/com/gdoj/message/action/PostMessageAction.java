@@ -20,9 +20,15 @@ import com.gdoj.tags.service.TagsService;
 import com.gdoj.tags.vo.Tags;
 import com.gdoj.tagsview.service.TagsviewService;
 import com.gdoj.tagsview.vo.Tagsview;
+
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
+import com.util.Config;
+import com.util.Html2Text;
+import com.util.MailUtil;
 import com.util.freemarker.MyFreeMarker;
+import com.gdoj.user.service.UserService;
+import com.gdoj.user.vo.User;
 
 public class PostMessageAction extends ActionSupport {
 
@@ -52,6 +58,15 @@ public class PostMessageAction extends ActionSupport {
 	private List<String> tag;
 	private Integer tagsCount=0;
 	
+	private UserService userService;
+	
+	@JSON(deserialize=false,serialize=false) 
+	public UserService getUserService() {
+		return userService;
+	}
+	public void setUserService(UserService userService) {
+		this.userService = userService;
+	}
 	@JSON(deserialize=false,serialize=false)   
 	public TagsviewService getTagsviewService() {
 		return tagsviewService;
@@ -158,11 +173,11 @@ public class PostMessageAction extends ActionSupport {
 			ActionContext.getContext().getSession().put("session_submit", dt);
 			
 			Message message_ = new Message();
+			Message message_parent = new Message();
+			Message message_root = new Message();
+			
 			//System.out.println(messageId+title+content);
 			if("new".equals(type)){ //新建
-			 
-			
-				
 				message_.setProblem_id(problemId);
 				message_.setContest_id(contestId);
 				message_.setModule_id(moduleId);
@@ -170,11 +185,15 @@ public class PostMessageAction extends ActionSupport {
 				message_.setRoot_id(rootId);
 				message_.setContent(content);
 				if(!parentId.equals(0)){
-					message_.setTitle(messageService.queryMessage(rootId).getTitle());
+					message_root = messageService.queryMessage(rootId);
+					if (null == message_root){
+						success = false; error="post topic failed.";
+					 	return SUCCESS;
+					}
+					message_.setTitle(message_root.getTitle());
 				}else{
 					message_.setTitle(title);
 				}
-				
 				
 				message_.setCreate_user(createUser);
 			//	Date dt = new Date();
@@ -186,6 +205,50 @@ public class PostMessageAction extends ActionSupport {
 					messageService.saveMessage(message);
 				}
 				messageId = message.getMessage_id();
+				
+				/* 发送到被评论用户注册邮箱*/
+				if(!parentId.equals(0)){
+					try {
+						/* 提醒用户注册邮箱 */
+						message_parent = messageService.queryMessage(parentId);
+						if (null == message_parent){
+							success = false; error="post topic failed.";
+						 	return SUCCESS;
+						}
+						
+						User user_ = new User(); /* 获取被评论的用户*/
+						user_ = userService.queryUser(message_parent.getCreate_user());
+						if (null == user_){
+							success = false; error="post topic failed.";
+						 	return SUCCESS;
+						}
+						
+						MailUtil sendmail = new MailUtil();
+						sendmail.setHost(Config.getValue("MAIL_HOST")); //发邮件服务器
+						sendmail.setUserName(Config.getValue("MAIL_USERNAME")); //用户名
+						sendmail.setPassWord(Config.getValue("MAIL_PSW")); //密码
+						sendmail.setTo(user_.getEmail()); //发送到
+						sendmail.setFrom(Config.getValue("MAIL_FROM")); //发送邮箱
+						sendmail.setSubject(message_root.getTitle()); //标题
+						String content_ = new String();
+						content_ = "Hi! " + user_.getUsername() + " , new reply from "
+								+ createUser + "\n " + Config.getValue("DOMAIN")
+								+ "/topic/"+ message_root.getMessage_id() +"#rpl_" + messageId + 
+								"\n\n" + Html2Text.RemoveHtml(content);
+						
+						sendmail.setContent(content_); //邮件内容
+						sendmail.sendMail();
+						
+						System.out.println(createUser + "sendmail.sendMail() ok.. ");
+						
+					} catch (Exception e) {
+						// TODO: handle exception
+						System.out.println("sendmail.sendMail() failed [line:245].. ");
+						//success = false; error="post topic failed.";
+						//return SUCCESS;
+					}
+				}
+				
 			}else{  //修改
 				
 				message_ = messageService.queryMessage(messageId);
@@ -254,8 +317,9 @@ public class PostMessageAction extends ActionSupport {
 			success = false; error="Unknown error.";
 			return SUCCESS;
 		}
-		success = true;
 		
+		success = true;
+		System.out.println("post topic ok. ");
 		return SUCCESS;
 	}
 	

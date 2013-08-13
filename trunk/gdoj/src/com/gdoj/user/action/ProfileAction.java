@@ -3,10 +3,7 @@ package com.gdoj.user.action;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-
-import org.apache.struts2.ServletActionContext;
-
+import com.gdoj.bean.OnlineUserBean;
 import com.gdoj.problem.service.ProblemService;
 import com.gdoj.problem.vo.Problem;
 import com.gdoj.solution.service.SolutionService;
@@ -14,6 +11,8 @@ import com.gdoj.user.service.UserService;
 import com.gdoj.user.vo.User;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
+import com.util.DateUtil;
+import com.util.OnlineUsers;
 
 public class ProfileAction extends ActionSupport {
 	private static final long serialVersionUID = 1L;
@@ -28,6 +27,28 @@ public class ProfileAction extends ActionSupport {
 	private String username;
 	private Integer rank;
 	
+	private String registerDate; 
+	private String lastAccessTime; /* online now , last vist time */
+	private Integer statusFlag;  /* 1(online), 0(offline) */
+	
+	public String getRegisterDate() {
+		return registerDate;
+	}
+	public void setRegisterDate(String registerDate) {
+		this.registerDate = registerDate;
+	}
+	public Integer getStatusFlag() {
+		return statusFlag;
+	}
+	public void setStatusFlag(Integer statusFlag) {
+		this.statusFlag = statusFlag;
+	}
+	public String getLastAccessTime() {
+		return lastAccessTime;
+	}
+	public void setLastAccessTime(String lastAccessTime) {
+		this.lastAccessTime = lastAccessTime;
+	}
 	public Integer getRank() {
 		return rank;
 	}
@@ -92,8 +113,10 @@ public class ProfileAction extends ActionSupport {
 				return ERROR;
 			}
 			
+			/* rank */
 			rank = userService.getUserRank(user);
 			
+			/* problem solved */
 			String sql = "select DISTINCT s.problem_id from Solution s where s.verdict=5 and s.username='"+user.getUsername()+"' order by s.problem_id ASC;";
 			List<Object> solvedProblemIdList = new ArrayList<Object>();
 			solvedProblemIdList = solutionService.query(sql);
@@ -107,10 +130,10 @@ public class ProfileAction extends ActionSupport {
 				}
 			}
 			
+			/* problem try */
 			sql="select distinct s.problem_id from Solution s where "+
 			"s.username='"+user.getUsername()+"' group by s.problem_id " +
 			"having SUM(s.verdict=5)<1 order by s.problem_id ASC;";
-			
 			
 			List<Object> tryProblemIdList = new ArrayList<Object>();
 			tryProblemIdList = solutionService.query(sql);
@@ -124,6 +147,26 @@ public class ProfileAction extends ActionSupport {
 				}
 			}
 			
+			
+			registerDate = new String();
+			registerDate = DateUtil.toFriendlyDate(user.getRegdate());
+			/* lastAccestTime */
+			lastAccessTime = new String();
+			OnlineUserBean ou = new OnlineUserBean();
+			ou = OnlineUsers.getUser(username);
+			if (null != ou){
+				lastAccessTime = DateUtil.toFriendlyDate(ou.getLastAccessTime());
+				user.setLastaccesstime(ou.getLastAccessTime());
+				if (1 == ou.getStatusFlag()){
+					statusFlag = 1;
+				}else{
+					statusFlag = 0;
+				}
+			}
+			else{
+				lastAccessTime = DateUtil.toFriendlyDate(user.getLastaccesstime());
+				statusFlag = 0;
+			}
 			
 		} catch (Exception e) {
 			// TODO: handle exception

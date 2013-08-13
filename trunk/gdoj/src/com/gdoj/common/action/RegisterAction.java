@@ -6,7 +6,7 @@ import com.gdoj.user.service.UserService;
 import com.gdoj.user.vo.User;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
-import com.util.OnlineUserList;
+import com.util.OnlineUsers;
 
 public class RegisterAction extends ActionSupport{
 
@@ -134,7 +134,7 @@ public class RegisterAction extends ActionSupport{
 			userService.save(user_);
 			
 			ActionContext.getContext().getSession().put("session_username",username);
-			OnlineUserList.addUser(username);
+			OnlineUsers.onlineUser(username);
 			
 			return SUCCESS;
 		} catch (Exception e) {

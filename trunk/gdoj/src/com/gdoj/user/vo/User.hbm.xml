@@ -40,6 +40,9 @@
         <property name="lastlogin" type="java.util.Date">
             <column name="lastlogin"  not-null="false" />
         </property>
+        <property name="lastaccesstime" type="java.util.Date">
+            <column name="lastaccesstime"  not-null="false" />
+        </property>
         <property name="ip" type="java.lang.String">
             <column name="ip" length="20" not-null="false" />
         </property>

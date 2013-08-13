@@ -9,7 +9,7 @@ import com.gdoj.user.service.UserService;
 import com.gdoj.user.vo.User;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
-import com.util.OnlineUserList;
+import com.util.OnlineUsers;
 
 public class JsonLoginAction extends ActionSupport {
 
@@ -67,7 +67,7 @@ public class JsonLoginAction extends ActionSupport {
 			user_ = userService.checkLogin(username, password);
 			if (null != user_) {
 			
-				OnlineUserList.addUser(user_.getUsername());
+				OnlineUsers.onlineUser(user_.getUsername());
 				
 				user_.setLastlogin(new Date());
 				userService.save(user_);

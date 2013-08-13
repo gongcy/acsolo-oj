@@ -8,8 +8,7 @@ import com.gdoj.user.service.UserService;
 import com.gdoj.user.vo.User;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
-import com.util.Mail;
-import com.util.OnlineUserList;
+import com.util.OnlineUsers;
 
 public class LoginAction extends ActionSupport {
 
@@ -58,11 +57,10 @@ public class LoginAction extends ActionSupport {
 			User user_ = new User();
 			user_ = userService.checkLogin(handle, password);
 			if (null != user_) {
-				
 				ActionContext.getContext().getSession().put("session_username",user_.getUsername());
 			//	ServletActionContext.getResponse().getWriter().print(1);
 				
-				OnlineUserList.addUser(user_.getUsername());
+				OnlineUsers.onlineUser(user_.getUsername());
 			
 				user_.setLastlogin(new Date());
 				userService.save(user_);

@@ -20,6 +20,7 @@ public class User implements java.io.Serializable {
 	private Date birthday;
 	private Date regdate;
 	private Date lastlogin;
+	private Date lastaccesstime;
 	private Integer language;
 	private Integer solved;
 	private Integer submit;
@@ -147,6 +148,14 @@ public class User implements java.io.Serializable {
 
 	public void setLastlogin(Date lastlogin) {
 		this.lastlogin = lastlogin;
+	}
+
+	public Date getLastaccesstime() {
+		return lastaccesstime;
+	}
+
+	public void setLastaccesstime(Date lastaccesstime) {
+		this.lastaccesstime = lastaccesstime;
 	}
 	
 }

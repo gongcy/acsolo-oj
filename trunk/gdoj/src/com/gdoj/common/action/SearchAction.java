@@ -13,8 +13,6 @@ import com.gdoj.user.service.UserService;
 import com.gdoj.user.vo.User;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
-import com.util.Mail;
-import com.util.OnlineUserList;
 
 public class SearchAction extends ActionSupport {
 

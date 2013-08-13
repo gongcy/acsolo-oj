@@ -3,14 +3,17 @@ package com.gdoj.common.action;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.struts2.ServletActionContext;
 
+import com.gdoj.bean.OnlineUserBean;
 import com.gdoj.user.service.UserService;
 import com.gdoj.user.vo.User;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
-import com.util.OnlineUserList;
+import com.util.OnlineUsers;
 
 public class JsonOnlineUserAction extends ActionSupport {
 
@@ -21,13 +24,13 @@ public class JsonOnlineUserAction extends ActionSupport {
 	
 	private boolean success;
 	private String error;
-	private List<String> usersList;
+	private Map<String,OnlineUserBean> online_users;
 	
-	public List<String> getUsersList() {
-		return usersList;
+	public Map<String, OnlineUserBean> getOnline_users() {
+		return online_users;
 	}
-	public void setUsersList(List<String> usersList) {
-		this.usersList = usersList;
+	public void setOnline_users(Map<String, OnlineUserBean> onlineUsers) {
+		online_users = onlineUsers;
 	}
 	public boolean isSuccess() {
 		return success;
@@ -46,8 +49,8 @@ public class JsonOnlineUserAction extends ActionSupport {
 	public String onlineUsers()throws Exception {
 		try {
 			//
-			usersList = new ArrayList<String>();
-			usersList = OnlineUserList.list();
+			online_users = new HashMap<String, OnlineUserBean>();
+			online_users = OnlineUsers.getOnlineUsers();
 			//System.out.println(usersList.size());
 			success = true;
 			return SUCCESS;
