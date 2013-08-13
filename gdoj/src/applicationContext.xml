@@ -164,6 +164,7 @@
 		<property name="messageService" ref="messageService" />
 		<property name="tagsviewService" ref="tagsviewService" />
 		<property name="tagsService" ref="tagsService" />
+		<property name="userService" ref="userService" />
 	</bean>
 	<bean name="messageVoteBean" class="com.gdoj.message.action.JsonMessageVoteAction" scope="prototype"><!-- prototype每次都new一个，要不会造成对象共享  -->
 		<property name="messageService" ref="messageService" />
@@ -539,6 +540,39 @@
             <property name="triggers">  
                 <list>  
                     <ref bean="doTime"/>  
+                </list>  
+            </property>  
+        </bean>  
+
+	<!-- online users -->
+		<bean id="QuartzOnlineUsersJob" class="com.gdoj.bean.QuartzOnlineUsersJob"></bean>  
+        <!-- 定义调用对象和调用对象的方法 -->  
+        <bean id="jobtaskOnlineUsers" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">  
+            <!-- 调用的类 -->  
+            <property name="targetObject">  
+                <ref bean="QuartzOnlineUsersJob"/>  
+            </property>  
+            <!-- 调用类中的方法 -->  
+            <property name="targetMethod">  
+                <value>work</value>  
+            </property>  
+        </bean>  
+   
+        <!-- 定义触发时间 per 1 minutes  -->  
+        <bean id="doTimeOnlineUsers" class="org.springframework.scheduling.quartz.CronTriggerBean">  
+            <property name="jobDetail">  
+                <ref bean="jobtaskOnlineUsers"/>  
+            </property>  
+            <!-- cron表达式 -->  
+            <property name="cronExpression">  
+                <value>0 0,15,30,45 * * * ?</value>  
+            </property>  
+        </bean>  
+        <!-- 总管理类 如果将lazy-init='false'那么容器启动就会执行调度程序  -->  
+        <bean id="startQuertzOnlineUsers" lazy-init="false" autowire="no" class="org.springframework.scheduling.quartz.SchedulerFactoryBean">    
+            <property name="triggers">  
+                <list>  
+                    <ref bean="doTimeOnlineUsers"/>  
                 </list>  
             </property>  
         </bean>  
