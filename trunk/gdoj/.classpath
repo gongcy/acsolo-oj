@@ -17,7 +17,6 @@
 	<classpathentry kind="lib" path="D:/lib/oj/commons-dbcp.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/commons-fileupload-1.2.2.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/commons-io-2.0.1.jar"/>
-	<classpathentry kind="lib" path="D:/lib/oj/commons-lang.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/commons-logging-1.0.4.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/commons-pool.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/dom4j-1.6.1.jar"/>
@@ -30,12 +29,10 @@
 	<classpathentry kind="lib" path="D:/lib/oj/log4j-1.2.16.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/mail.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/mysql-connector-java-3.1.8-bin.jar"/>
-	<classpathentry kind="lib" path="D:/lib/oj/ognl-2.7.3.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/ojdbc14.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/quartz-all-1.6.0.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/spring.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/standard.jar"/>
-	<classpathentry kind="lib" path="D:/lib/oj/struts2-core-2.1.8.1.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/struts2-dojo-plugin-2.1.6.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/struts2-json-plugin-2.1.8.1.jar"/>
 	<classpathentry kind="lib" path="D:/lib/oj/struts2-junit-plugin-2.1.8.jar"/>
@@ -52,5 +49,11 @@
 	<classpathentry kind="lib" path="D:/lib/jxl.jar"/>
 	<classpathentry kind="lib" path="D:/lib/ostermillerutils_1_07_00.jar"/>
 	<classpathentry kind="lib" path="D:/lib/chardet-1.0.jar"/>
+	<classpathentry kind="lib" path="D:/lib/struts_bug/commons-lang3-3.1.jar"/>
+	<classpathentry kind="lib" path="D:/lib/struts_bug/commons-lang-2.4.jar"/>
+	<classpathentry kind="lib" path="D:/lib/struts_bug/javassist-3.11.0.GA.jar"/>
+	<classpathentry kind="lib" path="D:/lib/struts_bug/ognl-3.0.6.jar"/>
+	<classpathentry kind="lib" path="D:/lib/struts_bug/struts2-core-2.3.15.1.jar"/>
+	<classpathentry kind="lib" path="D:/lib/struts_bug/xwork-core-2.3.15.1.jar"/>
 	<classpathentry kind="output" path="WebRoot/WEB-INF/classes"/>
 </classpath>
