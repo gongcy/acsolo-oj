@@ -433,6 +433,8 @@ function ReplyInline(messageId,rootId){
         var rootId =  $(this).find("input[name=rootId]").val();
  		
         var content = $(this).find("textarea[name=content]").val();  
+        
+        $('input[type=submit]', this).attr('disabled', 'disabled');
           
         postNewCommentReply = function() {
             $.post(
@@ -445,7 +447,7 @@ function ReplyInline(messageId,rootId){
                     $('#inline-reply-content').focus();	
                     return;
                   }	
-                  $('input[type=submit]', this).attr('disabled', 'disabled');
+                  
                   //window.location.href="topic/"+rootId;
    					location.reload();
                 },
@@ -473,6 +475,8 @@ $(document).ready(function() {
         var rootId =  $(this).find("input[name=rootId]").val();
  		
         var content = $(this).find("textarea[name=content]").val();  
+        
+         $('input[type=submit]', this).attr('disabled', 'disabled');
           
         postNewCommentReply = function() {
             $.post(

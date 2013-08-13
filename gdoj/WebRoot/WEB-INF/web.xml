@@ -27,33 +27,22 @@
     <dispatcher>FORWARD</dispatcher>
   </filter-mapping> 
  
-  <filter>
-    <filter-name>ActionContextCleanUp</filter-name>
-    <filter-class>org.apache.struts2.dispatcher.ActionContextCleanUp</filter-class>
-  </filter>
-  <filter-mapping>
-    <filter-name>ActionContextCleanUp</filter-name>
-    <url-pattern>/*</url-pattern>
-    <dispatcher>REQUEST</dispatcher>
-    <dispatcher>FORWARD</dispatcher>
-    <dispatcher>INCLUDE</dispatcher>
-  </filter-mapping>
-
 	<!-- struts2 过滤器 -->
 	<filter>
-		<filter-name>struts2</filter-name>
+		<filter-name>struts2Filter</filter-name>
 		<filter-class>
-			org.apache.struts2.dispatcher.FilterDispatcher
+			org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter
 		</filter-class>
 	</filter>
  	<filter-mapping>
-		<filter-name>struts2</filter-name>
+		<filter-name>struts2Filter</filter-name>
 		<url-pattern>*.action</url-pattern>
         <dispatcher>REQUEST </dispatcher>  
         <dispatcher>FORWARD </dispatcher> 	 
 	</filter-mapping>
+
     <filter-mapping>
-        <filter-name>struts2</filter-name>
+        <filter-name>struts2Filter</filter-name>
         <url-pattern>/*</url-pattern> 
     </filter-mapping>
 	    
@@ -66,23 +55,7 @@
 			org.springframework.web.context.ContextLoaderListener
 		</listener-class>
 	</listener>
-	<!-- OpenSessionInViewFilter过滤器 
-	<filter>
-		<filter-name>lazyLoadingFilter</filter-name>
-		<filter-class>
-			org.springframework.orm.hibernate3.support.OpenSessionInViewFilter
-		</filter-class>
-	</filter>
-	<filter-mapping>
-		<filter-name>lazyLoadingFilter</filter-name>
-		<url-pattern>*.action</url-pattern>
-	</filter-mapping>
-	-->
-<!-- 
-	<listener>
-		<listener-class>com.gdoj.listener.TimerListener</listener-class>
-	</listener>
-  -->	
+
 
 	 <listener>
 		<listener-class>com.gdoj.listener.OnlineHttpSessionListener</listener-class>

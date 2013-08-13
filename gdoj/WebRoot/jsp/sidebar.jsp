@@ -172,10 +172,20 @@ $(document).ready(function() {
                   }	
                      var size=0;
 	                 var opt="";   
-		          	 for(var i in json.usersList){	
+	
+		          	 for(var i in json.online_users){	
+
+		          		 if (json.online_users[i].statusFlag == 0)
+					 	 {
+							continue;
+					 	 }
 		          		 size++;	
-					 	 opt+="<b><a style='font-size:12px; padding:0 10 0 0px;' href='profile/"+json.usersList[i]+"'>"+json.usersList[i]+"</a></b>"	 	
-					}  							
+
+					 	 opt+="<b><a style='font-size:12px; padding:0 10 0 0px;' title='Last visit at " + 
+					 	 json.online_users[i].lastAccessTime + "' href='profile/"+json.online_users[i].username+"'>"+
+					 	 i + "</a></b><br>";	 	
+					}  
+											
 					$(".user-sum").html(size);	
 					if(size==0){
 						opt="<span style='font: 11px/26px Monaco, monospace;color: #454545;'>No user online.</span>";
