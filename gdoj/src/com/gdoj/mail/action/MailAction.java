@@ -173,6 +173,7 @@ public class MailAction extends ActionSupport {
 			String username_ = (String)ActionContext.getContext().getSession().get("session_username");
 			if(username_==null){
 				ActionContext.getContext().put("tip", "You must login first.");
+				
 				return LOGIN;
 			}
 			

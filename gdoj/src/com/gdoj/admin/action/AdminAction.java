@@ -41,9 +41,18 @@ public class AdminAction extends ActionSupport{
 	private String privilege;
 	private String privilege_value;
 	private String cmdline;
+	private String topic_switch;
 	
 	private File file;
 	
+	public String getTopic_switch() {
+		return topic_switch;
+	}
+
+	public void setTopic_switch(String topicSwitch) {
+		topic_switch = topicSwitch;
+	}
+
 	public File getFile() {
 		return file;
 	}
@@ -109,7 +118,8 @@ public class AdminAction extends ActionSupport{
 	
 	public String switchs(){
 		opensource = getPrivilege("OPENSOURCE")==true?"YES":"NO";
-
+		topic_switch = getPrivilege("OPENBBS")==true?"YES":"NO";
+		
 		return "switchs";
 	}
 	

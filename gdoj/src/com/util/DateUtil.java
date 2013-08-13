@@ -82,4 +82,19 @@ public class DateUtil {
 		return nowTime;
 	}
 
+	public static String toFriendlyDate(Date time){
+		if(time == null) return "unknown";
+		int ct = (int)((System.currentTimeMillis() - time.getTime())/1000);
+		if(ct < 3600)
+			return Math.max(ct / 60,1) +" minutes ago";
+		if(ct >= 3600 && ct < 172800)  // 48小时
+			return ct / 3600 + " hours ago";
+		if(ct >= 172800 && ct < 2592000){ //86400 * 30
+			int day = ct / 86400 ;	
+			return day + " days ago";			
+		}
+		if(ct >= 2592000 && ct < 62208000) //到24个月
+			return ct / 2592000 + " months ago";
+		return ct / 31104000 + " years ago";
+	}
 }

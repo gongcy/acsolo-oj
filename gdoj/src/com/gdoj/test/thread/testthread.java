@@ -1,7 +1,5 @@
 package com.gdoj.test.thread;
 
-import com.util.Mail;
-
 import junit.framework.TestCase;
 
 

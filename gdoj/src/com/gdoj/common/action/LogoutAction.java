@@ -1,7 +1,7 @@
 package com.gdoj.common.action;
 import com.opensymphony.xwork2.ActionContext;
 import com.opensymphony.xwork2.ActionSupport;
-import com.util.OnlineUserList;
+import com.util.OnlineUsers;
 
 public class LogoutAction extends ActionSupport {
 
@@ -18,7 +18,7 @@ public class LogoutAction extends ActionSupport {
 				}
 				String name = (String)ActionContext.getContext().getSession().get("session_username").toString();
 				if(name!=null&&name.length()!=0){						
-					OnlineUserList.removeUser(name);
+					OnlineUsers.offlineUser(name);
 				}
 				
 				ActionContext actionContext = ActionContext.getContext();

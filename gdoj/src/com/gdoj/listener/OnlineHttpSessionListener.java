@@ -4,7 +4,7 @@ import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
 
 import com.gdoj.user.service.UserService;
-import com.util.OnlineUserList;
+import com.util.OnlineUsers;
 
 public class OnlineHttpSessionListener implements HttpSessionListener {
 	private UserService userService;
@@ -25,10 +25,10 @@ public class OnlineHttpSessionListener implements HttpSessionListener {
 	public void sessionDestroyed(HttpSessionEvent se) {
 		// TODO Auto-generated method stub	
 		String name = se.getSession().getAttribute("session_username").toString();
-		//System.out.println(name+" Do Log out...");
+		System.out.println(name+" Do Log out...");
 		if(name!=null&&name.length()!=0){	
 			//us.logout(name);
-			OnlineUserList.removeUser(name);
+			OnlineUsers.removeUser(name);
 		}
 	}
 }
