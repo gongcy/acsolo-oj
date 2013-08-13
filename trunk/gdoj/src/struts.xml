@@ -172,6 +172,7 @@
 		<action name="news" class="newsListBean" method="queryNews">
 			<result name="success" >/jsp/newslist.jsp</result>	
 		</action>
+		
 		<action name="newsshow" class="newsBean" method="showNews">
 			<result name="success" >/jsp/newsshow.jsp</result>	
 		</action>
@@ -703,6 +704,10 @@
 			   	 <param name="excludeProperties"></param> 
 		</action>
 		<action name="chart" class="StatisticBean" method="statistic">
+			<result type="json"/>    	
+			   	 <param name="excludeProperties"></param> 
+		</action>
+		<action name="ping" class="com.gdoj.common.action.PingAction" method="ping">
 			<result type="json"/>    	
 			   	 <param name="excludeProperties"></param> 
 		</action>
