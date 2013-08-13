@@ -663,11 +663,19 @@
         </to>  
     </rule>
     
-         <rule>
+    <rule>
        <note>search</note>  
         <from>/search$</from>  
         <to>  
             /search.action
+        </to>  
+    </rule>
+    
+   <rule>
+       <note>ping</note>  
+        <from>/ping$</from>  
+        <to>  
+            /ping.action
         </to>  
     </rule>
     

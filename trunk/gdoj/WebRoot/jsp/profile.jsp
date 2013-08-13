@@ -57,12 +57,16 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 				   			 	</span></li>
 				       			<li><span style="color:#378059;"><s:if test="user.motto==null||user.motto==''">Welcome to GUET Online Judge</s:if><s:else><s:property value="user.motto"/></s:else></span></li>
 				       			
-				   				<li><span title="<s:date name="user.lastlogin" nice="true" format="yyyy-MM-dd HH:mm:ss"/>"> Last login: <s:date name="user.lastlogin" nice="false" format="yyyy-MM-dd HH:mm:ss"/></span></li> 
-				       		 	<li><span title="<s:date name="user.regdate" nice="true" format="yyyy-MM-dd HH:mm:ss"/>"> Registered: <s:date name="user.regdate" nice="false" format="yyyy-MM-dd HH:mm:ss"/></span></li> 	       	
-	                   			<s:if test="#session.session_username==user.username">
+				       			<s:if test="#session.session_username==user.username">
 	                   			<li>E-mail: <s:property value="user.email" default="0"/> &nbsp; &nbsp;<span style="color:grey">(not visible)</span></li>
 						        <li>Birthday: <s:date name="user.birthday" nice="false" format="yyyy-MM-dd"/>&nbsp; &nbsp;<span style="color:grey">(not visible)</span></li>       
 						        </s:if>
+				       			<!-- 
+				   				<li><span title="<s:date name="user.lastlogin" nice="true" format="yyyy-MM-dd HH:mm:ss"/>"> Last login: <s:date name="user.lastlogin" nice="false" format="yyyy-MM-dd HH:mm:ss"/></span></li> 
+				       		 	 -->
+				       		 	<li><span title="<s:date name="user.lastaccesstime" nice="false" format="yyyy-MM-dd HH:mm:ss"/>"> Last visit: <s:property value="lastAccessTime" default="unknow"/></span> <s:if test="statusFlag == 1"><span style="color:green;font-weight:bold;">Online Now</span></s:if> </li>
+	                   			<li><span title="<s:date name="user.regdate" nice="false" format="yyyy-MM-dd HH:mm:ss"/>"> Registered: <s:property value="registerDate" default="unknow"/></span></li> 	       	
+
 						        <li>Default Language: <s:property value="%{getText('language'+user.language)}"/></li>
 						        <li>Open Source: <s:if test="user.opensource==\"N\"">No</s:if>
 								<s:else>Yes</s:else>

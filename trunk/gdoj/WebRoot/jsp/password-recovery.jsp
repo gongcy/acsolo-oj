@@ -40,14 +40,23 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 					<div class="register-box">
 						<form id="revocer" method="post" action="passwordRecovery">
 							<table class="table-form">       
-			                   <tr>
+							 <tr>
 				                  <td class="field-name">Username</td>
 				                  <td class="input"> <input  id="username" style="width: 250px;"  name="username" maxlength="30" placeholder="Your username,not your nickname" value="<s:property value="username"/>"/></td>
 			                  </tr>
 			                  <tr class="subscription-row">
 				                  <td >&nbsp;</td>
 				                  <td><div class="shiftUp"><span class="fielderror"><s:fielderror ><s:param>username</s:param></s:fielderror></span></div></td>
-			                  </tr>			                  
+			                  </tr>	
+							 <tr>
+				                  <td class="field-name">Register-Email</td>
+				                  <td class="input"> <input  id="email" style="width: 250px;"  name="email" maxlength="30" placeholder="Your registration-email" value="<s:property value="email"/>"/></td>
+			                  </tr>
+			                  <tr class="subscription-row">
+				                  <td >&nbsp;</td>
+				                  <td><div class="shiftUp"><span class="fielderror"><s:fielderror ><s:param>email</s:param></s:fielderror></span></div></td>
+			                  </tr>	
+				                  
 			                    <tr>
 			                        <td colspan="2">
 			                            <div style="text-align: center;"><input id="sub" type="Submit" value="Revocer"/></div>        

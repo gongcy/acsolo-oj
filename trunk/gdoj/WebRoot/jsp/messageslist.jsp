@@ -74,7 +74,7 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 						</a></s:else>
 					</s:iterator>	
 					<s:if test="page < pageCount">		
-						<a href="t/page/<s:property value="page+1"/>" style="color:#000;text-decoration: none;">  &rarr; </a>		
+						<a href="topic/page/<s:property value="page+1"/>" style="color:#000;text-decoration: none;">  &rarr; </a>		
 					</s:if>						
 		   </div>
 		</div>  

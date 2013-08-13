@@ -299,7 +299,9 @@ $(document).ready(function() {
         var reply =	$(this).find("input[name=reply]").val();     
      	var title = $(this).find("input[name=title1]").val();
         var content = $(this).find("textarea[name=content]").val();    
-        
+         
+        $('input[type=submit]', this).attr('disabled', 'disabled');
+
         postNewMailReply = function() {
             $.post(
                 "postmail",
@@ -309,7 +311,7 @@ $(document).ready(function() {
                      $(".fielderror").html(data.error);
                     return;
                   }	
-                    $('input[type=submit]', this).attr('disabled', 'disabled');
+                    
                   	window.location.href="mails/send"; 
                 },
                 "json"
