@@ -1,3 +1,13 @@
+/*
+Author: Jungle Wei
+Date  : 2013-10
+Description: A mini common command line system
+
+Note:
+	_LINUX_ for compile on Linux , #define _LINUX_  or g++ -D_LINUX_ cmd.cpp
+
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,7 +19,7 @@
 
 #ifdef _LINUX_
 #include <curses.h>
-#include <termios.h> /* linux for getch */
+#include <termios.h>
 #include <unistd.h>
 #else
 #include <conio.h>
