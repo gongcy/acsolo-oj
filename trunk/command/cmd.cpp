@@ -1,13 +1,24 @@
 #include <stdio.h>
-#include <conio.h>
 #include <stdlib.h>
-#include <io.h>
-#include <windows.h>
-#include <time.h>
-
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
+
+#include <stdarg.h>
 #include <assert.h>
+
+#ifdef _LINUX_
+#include <curses.h>
+#include <termios.h> /* linux for getch */
+#include <unistd.h>
+#else
+#include <conio.h>
+#include <io.h>
+#include <windows.h>
+
+#endif
+
+
 
 /* config */
 // log info level
@@ -61,6 +72,24 @@ int g_debug_switch = DEBUG_OFF;
 
 char g_sysname[CMD_MAX_SYSNAME_SIZE] = "cmd-sys";
 
+#define _CMDDEF_
+#ifndef  _CMDDEF_
+typedef unsigned int UINT;
+#endif
+#ifndef  _CMDDEF_
+typedef unsigned short USHORT;
+#endif
+#ifndef  _CMDDEF_
+typedef unsigned long ULONG;
+#endif
+#ifndef  _CMDDEF_
+typedef unsigned char UCHAR;
+#endif
+
+/* assert(0) */
+#define CMD_DBGASSERT(x) if (0 == x) printf("Assert!!!!!!!!!!!!!! Is that a bug?");
+
+#define CMD_NOUSED(x) ((x) = (x))
 
 void debug_print(const char *format, ...)
 {
@@ -83,6 +112,32 @@ void debug_print(const char *format, ...)
 	va_end(args);
 	printf("\r\n");
 }
+
+
+int cmd_getch()
+{
+	int c = 0;
+	#ifdef _LINUX_
+	struct termios org_opts, new_opts;
+	int res = 0;
+	//-----  store old settings -----------
+	res = tcgetattr(STDIN_FILENO, &org_opts);
+	assert(res == 0);
+	//---- set new terminal parms --------
+	memcpy(&new_opts, &org_opts, sizeof(new_opts));
+	new_opts.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
+	tcsetattr(STDIN_FILENO, TCSANOW, &new_opts);
+	c = getchar();
+	//------  restore old settings ---------
+	res = tcsetattr(STDIN_FILENO, TCSANOW, &org_opts);
+	assert(res == 0);
+	#else
+	c = getch();
+	#endif
+
+	return c;
+}
+
 
 /**
  * Cursor back one grid
@@ -236,7 +291,7 @@ int cmd_elem_is_para_type(CMD_ELEM_TYPE_EM type)
 }
 
 /**
- * A struct cmd_elem relative to One command
+ * A struct cmd_elem_st relative to One command
  *
  * @param string command string, such as 'show vlan'
  * @param doc command refenrence, each command word has one
@@ -244,10 +299,10 @@ int cmd_elem_is_para_type(CMD_ELEM_TYPE_EM type)
  * @param para_vec command string in para_vec form
  * @param para_size command parameter number
  */
-struct cmd_elem {
+struct cmd_elem_st {
 	char *string;
 	char *doc;
-	int (*func)(struct cmd_elem *, struct cmd_vty *, int , char **);
+	int (*func)(struct cmd_elem_st *, struct cmd_vty *, int , char **);
 	cmd_vector_t *para_vec;
 	int para_num;
 
@@ -284,15 +339,15 @@ cmd_vector_t *cmd_vec;
 
 /* DEFUN for vty command interafce. Little bit hacky ;-). */
 #define DEFUN(cmdname, cmdstr, helpstr, funcname) \
-	int funcname (struct cmd_elem *, struct cmd_vty *, int, char **); \
-	struct cmd_elem cmdname = \
+	int funcname (struct cmd_elem_st *, struct cmd_vty *, int, char **); \
+	struct cmd_elem_st cmdname = \
 	{ \
 		cmdstr, \
 		helpstr, \
 		funcname \
 	}; \
 	int funcname \
-	(struct cmd_elem *self, struct cmd_vty *vty, int argc, char **argv)
+	(struct cmd_elem_st *self, struct cmd_vty *vty, int argc, char **argv)
 
 
 enum CMD_ELEM_ID_EM {
@@ -425,7 +480,7 @@ int cmd_get_elem_by_name(char *cmd_name, struct para_desc *cmd_elem)
     Modification : Created function
 
 *****************************************************************************/
-int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, char *cmd_name, char *cmd_help)
+int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, const char *cmd_name, const char *cmd_help)
 {
 
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:后续需要校验合法性 , 命名规范与变量名相似 */
@@ -465,6 +520,17 @@ int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, char 
 // definition of ASCII value of keys
 // Arrow key is a sequenece started by 27, 91, XX
 // Backspace value is 8, Ctrl+H equals backspace, so another value is 127
+#ifdef _LINUX_
+#define CMD_KEY_ARROW1	0x1b  		 //0xffffffe0
+#define CMD_KEY_ARROW2	0x5b		 //0x0
+#define CMD_KEY_UP		0x41         //0x48
+#define CMD_KEY_DOWN 	0x42		 //0x50
+#define CMD_KEY_RIGHT 	0x43		 //0x4d
+#define CMD_KEY_LEFT 	0x44		 //0x4b
+#define CMD_KEY_DELETE  0x7e		 //0x08
+#define CMD_KEY_BACKSPACE 0x20		 //0x8
+#define CMD_KEY_CTRL_H	(0x1f | 0x7f)
+#else
 #define CMD_KEY_ARROW1	0xffffffe0   //0x1b
 #define CMD_KEY_ARROW2	0x0			 //0x5b
 #define CMD_KEY_UP		0x48
@@ -474,20 +540,21 @@ int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, char 
 #define CMD_KEY_DELETE  0x08
 #define CMD_KEY_BACKSPACE 0x20
 #define CMD_KEY_CTRL_H	(0x1f | 0x7f)
+#endif
 
 enum CMD_KEY_CODE_EM {
-	KEY_NONE = -1,
-		KEY_TAB = 0,
-		KEY_ENTER,
-		KEY_QUEST,
-		KEY_UP,
-		KEY_DOWN,
-		KEY_LEFT,
-		KEY_RIGHT,
-		KEY_DELETE,
-		KEY_NOTCARE,
+	CMD_KEY_CODE_NONE = -1,
+		CMD_KEY_CODE_TAB = 0,  // CMD_KEY_CODE_TAB
+		CMD_KEY_CODE_ENTER,
+		CMD_KEY_CODE_QUEST,
+		CMD_KEY_CODE_UP,
+		CMD_KEY_CODE_DOWN,
+		CMD_KEY_CODE_LEFT,
+		CMD_KEY_CODE_RIGHT,
+		CMD_KEY_CODE_DELETE,
+		CMD_KEY_CODE_NOTCARE,
 
-		KEY_MAX
+		CMD_KEY_CODE_MAX
 };
 
 typedef struct key_handler {
@@ -496,16 +563,16 @@ typedef struct key_handler {
 } key_handler_t;
 
 
-const char *key_name[KEY_MAX] = {
-	"KEY_TAB",
-		"KEY_ENTER",
-		"KEY_QUEST",
-		"KEY_UP",
-		"KEY_DOWN",
-		"KEY_LEFT",
-		"KEY_RIGHT",
-		"KEY_DELETE",
-		"KEY_NOTCARE"
+const char *key_name[CMD_KEY_CODE_MAX] = {
+	"EM_KEY_TAB",
+		"CMD_KEY_CODE_ENTER",
+		"CMD_KEY_CODE_QUEST",
+		"CMD_KEY_CODE_UP",
+		"CMD_KEY_CODE_DOWN",
+		"CMD_KEY_CODE_LEFT",
+		"CMD_KEY_CODE_RIGHT",
+		"CMD_KEY_CODE_DELETE",
+		"CMD_KEY_CODE_NOTCARE"
 };
 
 int cmd_resolve(char c);
@@ -615,7 +682,7 @@ void cmd_vty_add_history(struct cmd_vty *vty)
 /* vector */
 // get an usable vector slot, if there is not, then allocate
 // a new slot
-static int ftf_vector_fetch(cmd_vector_t *v)
+static int cmd_vector_fetch(cmd_vector_t *v)
 {
 	int fetch_idx;
 
@@ -626,10 +693,10 @@ static int ftf_vector_fetch(cmd_vector_t *v)
 
 	// allocate new memory if not enough slot
 	while (v->size < fetch_idx + 1) {
-		debug_print("In ftf_vector_fetch, realloc memory for data.");
+		debug_print("In cmd_vector_fetch, realloc memory for data.");
 		v->data = (void**)realloc(v->data, sizeof(void *) * v->size * 2);
 		if (!v->data) {
-			debug_print("In ftf_vector_fetch, Not Enough Memory For data");
+			debug_print("In cmd_vector_fetch, Not Enough Memory For data");
 			return -1;
 		}
 		memset(&v->data[v->size], 0, sizeof(void *) * v->size);
@@ -639,11 +706,11 @@ static int ftf_vector_fetch(cmd_vector_t *v)
 	return fetch_idx;
 }
 
-cmd_vector_t *ftf_vector_init(int size)
+cmd_vector_t *cmd_vector_init(int size)
 {
 	cmd_vector_t *v = (cmd_vector_t *)calloc(1, sizeof(struct cmd_vector));
 	if (v == NULL) {
-		debug_print("In ftf_vector_init, Not Enough Memory For cmd_vector");
+		debug_print("In cmd_vector_init, Not Enough Memory For cmd_vector");
 		return NULL;
 	}
 
@@ -652,7 +719,8 @@ cmd_vector_t *ftf_vector_init(int size)
 		size = 1;
 	v->data = (void**)calloc(1, sizeof(void *) * size);
 	if (v->data == NULL) {
-		debug_print("In ftf_vector_init, Not Enough Memory For data");
+		debug_print("In cmd_vector_init, Not Enough Memory For data");
+		free(v);
 		return NULL;
 	}
 
@@ -661,7 +729,7 @@ cmd_vector_t *ftf_vector_init(int size)
 	return v;
 }
 
-void ftf_vector_deinit(cmd_vector_t *v, int freeall)
+void cmd_vector_deinit(cmd_vector_t *v, int freeall)
 {
 	if (v == NULL)
 		return;
@@ -679,10 +747,15 @@ void ftf_vector_deinit(cmd_vector_t *v, int freeall)
 	free(v);
 }
 
-cmd_vector_t *ftf_vector_copy(cmd_vector_t *v)
+cmd_vector_t *cmd_vector_copy(cmd_vector_t *v)
 {
 	int size;
 	cmd_vector_t *new_v = (cmd_vector_t *)calloc(1, sizeof(cmd_vector_t));
+	if (NULL == new_v)
+	{
+		CMD_DBGASSERT(0);
+		return NULL;
+	}
 
 	new_v->used_size = v->used_size;
 	new_v->size = v->size;
@@ -694,28 +767,34 @@ cmd_vector_t *ftf_vector_copy(cmd_vector_t *v)
 	return new_v;
 }
 
-void ftf_vector_insert(cmd_vector_t *v, void *val)
+void cmd_vector_insert(cmd_vector_t *v, void *val)
 {
 	int idx;
 
-	idx = ftf_vector_fetch(v);
+	idx = cmd_vector_fetch(v);
 	v->data[idx] = val;
 	if (v->used_size <= idx)
 		v->used_size = idx + 1;
 }
 
 /*
-	仅用于用户输入末尾补<CR>，保存在ftf_vector_t->data
+	仅用于用户输入末尾补<CR>，保存在cmd_vector_t->data
 */
-void ftf_vector_insert_cr(cmd_vector_t *v)
+void cmd_vector_insert_cr(cmd_vector_t *v)
 {
 	char *string_cr = NULL;
 	string_cr = (char*)malloc(sizeof("<CR>"));
+	if (NULL == string_cr)
+	{
+		CMD_DBGASSERT(0);
+		return;
+	}
+
 	memcpy(string_cr, "<CR>", sizeof("<CR>"));
-	ftf_vector_insert(v, string_cr);
+	cmd_vector_insert(v, string_cr);
 
 	/*
-	  ftf_vector_insert(v, "<CR>"); // bug of memory free("<CR>"), it's static memory
+	  cmd_vector_insert(v, "<CR>"); // bug of memory free("<CR>"), it's static memory
 	*/
 }
 
@@ -741,7 +820,7 @@ cmd_vector_t *str2vec(char *string)
 		return NULL;
 
 	// copy each command pieces into vector
-	vec = ftf_vector_init(1);
+	vec = cmd_vector_init(1);
 	while (1)
 	{
 		start = cur;
@@ -750,9 +829,15 @@ cmd_vector_t *str2vec(char *string)
 			cur++;
 		str_len = cur - start;
 		token = (char *)malloc(sizeof(char) * (str_len + 1));
+		if (NULL == token)
+		{
+			debug_print("In str2vec, There is no memory for param token.");
+			return NULL;
+		}
+
 		memcpy(token, start, str_len);
 		*(token + str_len) = '\0';
-		ftf_vector_insert(vec, (void *)token);
+		cmd_vector_insert(vec, (void *)token);
 
 		while((isspace ((int) *cur) || *cur == '\n' || *cur == '\r') &&
 			*cur != '\0')
@@ -784,12 +869,12 @@ static int match_unique_string(struct para_desc **match, char *str, int size)
 // turn a command into vector
 static cmd_vector_t *cmd2vec(char *string, char *doc)
 {
-	char *sp, *d_sp;	// parameter start point
+	char *sp=NULL, *d_sp=NULL;	// parameter start point
 	char *cp = string;	// parameter current point
 	char *d_cp = doc;	// doc point
-	char *token, *d_token;	// paramter token
+	char *token=NULL, *d_token=NULL;	// paramter token
 	int len, d_len;
-	cmd_vector_t *allvec;
+	cmd_vector_t *allvec=NULL;
 	struct para_desc *desc = NULL;
 	struct para_desc *desc_cr = NULL;
 
@@ -798,7 +883,7 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 
 	// split command string into paramters, and turn these paramters
 	// into vector form
-	allvec = ftf_vector_init(1);
+	allvec = cmd_vector_init(1);
 	while (1)
 	{
 		// get next parameter from 'string'
@@ -813,6 +898,12 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 			cp++;
 		len = cp - sp;
 		token = (char*)malloc(len + 1);
+		if (NULL == token)
+		{
+			debug_print("In cmd2vec, There is no memory for param token.");
+			return NULL;
+		}
+
 		memcpy(token, sp, len);
 		*(token + len) = '\0';
 
@@ -827,6 +918,13 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 				d_cp++;
 			d_len = d_cp - d_sp;
 			d_token = (char*)malloc(d_len + 1);
+			if (NULL == d_token)
+			{
+				debug_print("In cmd2vec, There is no memory for param d_token.");
+				free(token);
+				return NULL;
+			}
+
 			memcpy(d_token, d_sp, d_len);
 			*(d_token + d_len) = '\0';
 		}
@@ -836,6 +934,8 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 		if (desc == NULL)
 		{
 			debug_print("In cmd2Vec, calloc for desc fail. (token=%s)", token);
+			free(token);
+			free(d_token);
 			return NULL;
 		}
 
@@ -843,13 +943,16 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 		if (0 != cmd_get_elem_by_name(token, desc))
 		{
 			debug_print("In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
+			free(token);
+			free(d_token);
+			free(desc);
 			return NULL;
 		}
 		/* END:   Added by weizengke, 2013/10/4   PN:None */
 
 		debug_print("In cmd2Vec, desc. (elem_id=%d, elem_tpye=%d, para=%s, desc=%s)", desc->elem_id, desc->elem_tpye, desc->para, desc->desc);
 
-		ftf_vector_insert(allvec, (void *)desc);
+		cmd_vector_insert(allvec, (void *)desc);
 	}
 
 	// add <CR> into command vector
@@ -857,20 +960,23 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 	if (desc_cr == NULL)
 	{
 		debug_print("In cmd2Vec, calloc for desc_cr fail. (token=%s)", token);
+		cmd_vector_deinit(allvec, 1);
 		return NULL;
 	}
 
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:for regCmdElem  */
-	if (0 != cmd_get_elem_by_name("<CR>", desc_cr))
+	if (0 != cmd_get_elem_by_name((char*)"<CR>", desc_cr))
 	{
 		debug_print("In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
+		free(desc_cr);
+		cmd_vector_deinit(allvec, 1);
 		return NULL;
 	}
 	/* END:   Added by weizengke, 2013/10/4   PN:None */
 
 	debug_print("In cmd2Vec, desc_cr. (elem_id=%d, elem_tpye=%d, para=%s, desc=%s)", desc_cr->elem_id, desc_cr->elem_tpye, desc_cr->para, desc_cr->desc);
 
-	ftf_vector_insert(allvec, (void *)desc_cr);
+	cmd_vector_insert(allvec, (void *)desc_cr);
 
 /*
 	{
@@ -1000,7 +1106,7 @@ int cmd_match_special_string(char *icmd, char *dest)
 			break;
 		case CMD_ELEM_TYPE_STRING:
 			{
-				int icmd_len = strlen(icmd);
+				int icmd_len = (int)strlen(icmd);
 				if (icmd_len >= a && icmd_len <= b)
 				{
 					debug_print("In cmd_match_special_string, match STRING<%d-%d>.", a, b);
@@ -1049,7 +1155,7 @@ int match_lcd(struct para_desc **match, int size)
 static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 {
 	int i;
-	struct cmd_elem *elem;
+	struct cmd_elem_st *elem;
 	struct para_desc *desc;
 
 	// For each command, check the 'index'th parameter if it matches the
@@ -1075,7 +1181,7 @@ static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 	debug_print("In cmd_filter_command. (cmd=%s,size=%d)",cmd,strlen(cmd));
 
 	for (i = 0; i < cmd_vector_max(v); i++) {
-		if ((elem = (struct cmd_elem*)cmd_vector_slot(v, i)) != NULL) {
+		if ((elem = (struct cmd_elem_st*)cmd_vector_slot(v, i)) != NULL) {
 			if (index >= cmd_vector_max(elem->para_vec)) {
 				debug_print("In cmd_filter_command. for loop -> %d filter. (cmd=%s)", i, cmd);
 				cmd_vector_slot(v, i) = NULL;
@@ -1109,9 +1215,12 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 		struct para_desc **match, int *match_size, char *lcd_str)
 {
 	int i;
-	cmd_vector_t *cmd_vec_copy = ftf_vector_copy(cmd_vec);
+	cmd_vector_t *cmd_vec_copy = cmd_vector_copy(cmd_vec);
 	int isize = 0;
 	int size = 0;
+
+	CMD_NOUSED(vty);
+	CMD_NOUSED(lcd_str);
 
 	// Three steps to find matched commands in 'cmd_vec'
 	// 1. for input command vector 'icmd_vec', check if it is matching cmd_vec
@@ -1143,8 +1252,8 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 
 		debug_print("In cmd_match_command, for loop -> %d.", i);
 
-		struct cmd_elem *elem = NULL;
-		elem = (struct cmd_elem *)cmd_vector_slot(cmd_vec_copy, i);
+		struct cmd_elem_st *elem = NULL;
+		elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
 
 		if(elem != NULL)
 		{
@@ -1179,7 +1288,7 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 		}
 	}
 
-	ftf_vector_deinit(cmd_vec_copy, 0);	// free cmd_vec_copy, no longer use
+	cmd_vector_deinit(cmd_vec_copy, 0);	// free cmd_vec_copy, no longer use
 
 	// Step 3
 	// No command matched
@@ -1235,12 +1344,12 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para_desc **match, int *match_size)
 {
 	int i;
-	cmd_vector_t *cmd_vec_copy = ftf_vector_copy(cmd_vec);
+	cmd_vector_t *cmd_vec_copy = cmd_vector_copy(cmd_vec);
 	int match_num = 0;
 
 	char *str;
 	struct para_desc *para_desc_;
-	struct cmd_elem *elem;
+	struct cmd_elem_st *elem;
 
 	if (icmd_vec == NULL || vty == NULL || match == NULL || match_size == NULL)
 	{
@@ -1269,7 +1378,7 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 
 		debug_print("In cmd_complete_command, for loop->i = %d. (icmd_vec_size=%d, cmd_vec_size=%d)", i, cmd_vector_max(icmd_vec), cmd_vector_max(cmd_vec_copy));
 
-		elem = (struct cmd_elem *)cmd_vector_slot(cmd_vec_copy, i);
+		elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
 		if(elem  != NULL) {
 			if (cmd_vector_max(icmd_vec) - 1 >= cmd_vector_max(elem->para_vec)) {
 				cmd_vector_slot(cmd_vec_copy, i) = NULL;
@@ -1288,8 +1397,9 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 			debug_print("In cmd_complete_command, for loop->i = %d, (str=%s, id=%d, para=%s)", i, str, para_desc_->elem_id, para_desc_->para);
 
 			/* BEGIN: Added by weizengke, 2013/10/4   PN:str is null, then get all command */
-			if ( strncmp(str, "<CR>", strlen(str)) == 0 ||
-				(str != NULL && strncmp(str, para_desc_->para, strlen(str)) == 0)) {
+			if ( str != NULL &&
+			     (strncmp(str, "<CR>", strlen(str)) == 0
+			     ||(strncmp(str, para_desc_->para, strlen(str)) == 0))) {
 
 				if (match_unique_string(match, para_desc_->para, match_num))
 				{
@@ -1302,7 +1412,7 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 		}
 	}
 
-	ftf_vector_deinit(cmd_vec_copy, 0);	// free cmd_vec_copy, no longer use
+	cmd_vector_deinit(cmd_vec_copy, 0);	// free cmd_vec_copy, no longer use
 
 	*match_size = match_num;
 
@@ -1312,9 +1422,9 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para_desc **match, int *match_size)
 {
 	int i;
-	cmd_vector_t *cmd_vec_copy = ftf_vector_copy(cmd_vec);
+	cmd_vector_t *cmd_vec_copy = cmd_vector_copy(cmd_vec);
 
-	struct cmd_elem *match_elem;
+	struct cmd_elem_st *match_elem = NULL;
 	int match_num = 0;
 
 	debug_print("In cmd_execute_command, input_command_size=%d. (include <CR>)", cmd_vector_max(icmd_vec));
@@ -1335,9 +1445,9 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	for(i = 0; i < cmd_vector_max(cmd_vec_copy); i++) {
 		char *str;
 		struct para_desc *desc;
-		struct cmd_elem *elem = NULL;
+		struct cmd_elem_st *elem = NULL;
 
-		elem = (struct cmd_elem *)cmd_vector_slot(cmd_vec_copy, i);
+		elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
 		if(elem != NULL) {
 			str = (char*)cmd_vector_slot(icmd_vec, cmd_vector_max(icmd_vec) - 1);
 			desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 1);
@@ -1368,7 +1478,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	*match_size = match_num;
 
 
-	ftf_vector_deinit(cmd_vec_copy, 0);
+	cmd_vector_deinit(cmd_vec_copy, 0);
 
 	/* check if exactly match */
 	if (match_num == 0)
@@ -1388,11 +1498,20 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	int argc = 0;
 	char *argv[CMD_MAX_CMD_NUM];
 
-	assert(match_elem->para_vec != 0);
+	if (NULL == match_elem || match_elem->para_vec == NULL)
+	{
+		debug_print("In cmd_execute_command, bug of match_elem is NULL........");
+		return CMD_NO_MATCH;
+	}
 
 	for (i = 0, argc = 0; i < match_elem->para_num; i ++)
 	{
 		struct para_desc  *desc = (struct para_desc *)cmd_vector_slot(match_elem->para_vec, i);
+		if (NULL == desc)
+		{
+			debug_print("In cmd_execute_command, bug of desc is NULL........");
+			return CMD_NO_MATCH;
+		}
 
 		debug_print("elem_id=%d, elem_tpye=%d, para=%s(%s)", desc->elem_id, desc->elem_tpye, desc->para, (char*)cmd_vector_slot(icmd_vec, i));
 
@@ -1420,7 +1539,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	return CMD_FULL_MATCH;
 }
 
-void install_element(struct cmd_elem *elem)
+void install_element(struct cmd_elem_st *elem)
 {
 	if (cmd_vec == NULL) {
 		cmd_debug(LOG_ERR, FNAME, "Command Vector Not Exist");
@@ -1429,7 +1548,7 @@ void install_element(struct cmd_elem *elem)
 
 	debug_print("install_element, string(%s), doc(%s).", elem->string, elem->doc);
 
-	ftf_vector_insert(cmd_vec, elem);
+	cmd_vector_insert(cmd_vec, elem);
 	elem->para_vec = cmd2vec(elem->string, elem->doc);
 	elem->para_num = cmd_vector_max(elem->para_vec);
 
@@ -1450,8 +1569,8 @@ void install_element(struct cmd_elem *elem)
 static void cmd_insert_word(struct cmd_vty *vty, const char *str)
 {
 	strcat(vty->buffer, str);
-	vty->cur_pos += strlen(str);
-	vty->used_len += strlen(str);
+	vty->cur_pos += (int)strlen(str);
+	vty->used_len += (int)strlen(str);
 }
 
 // delete the last word from input buffer
@@ -1480,8 +1599,8 @@ static inline void free_matched(char **matched)
 }
 
 
-int g_InputMachine_prev = KEY_NOTCARE;
-int g_InputMachine_now = KEY_NOTCARE;
+int g_InputMachine_prev = CMD_KEY_CODE_NOTCARE;
+int g_InputMachine_now = CMD_KEY_CODE_NOTCARE;
 
 char g_tabbingString[CMD_MAX_CMD_ELEM_SIZE] = {0};  /* 最初始用来补全查找的字串*/
 char g_tabString[CMD_MAX_CMD_ELEM_SIZE] = {0};      /* 最后一次补全的命令 */
@@ -1490,65 +1609,76 @@ int g_tabStringLenth = 0;
 /* ------------------ Interface Function ----------------- */
 int cmd_resolve(char c)
 {
-	int key_type = KEY_NOTCARE;	// default is not special key
+	int key_type = CMD_KEY_CODE_NOTCARE;	// default is not special key
 
 	switch (c) {
 	case CMD_KEY_ARROW1:
-		c = getch();
-		switch (c) {
-		case CMD_KEY_UP:
-			key_type = KEY_UP;
-			break;
-		case CMD_KEY_DOWN:
-			key_type = KEY_DOWN;
-			break;
-		case CMD_KEY_RIGHT:
-			key_type = KEY_RIGHT;
-			break;
-		case CMD_KEY_LEFT:
-			key_type = KEY_LEFT;
-			break;
-		default:
-			break;
-		}
-		break;
-	case CMD_KEY_ARROW2:
-			c = getch();
+		c = cmd_getch();
+		#ifdef _LINUX_
+		if (c == CMD_KEY_ARROW2)
+		{
+			c = cmd_getch();
+		#endif
 			switch (c) {
 			case CMD_KEY_UP:
-				key_type = KEY_UP;
+				key_type = CMD_KEY_CODE_UP;
 				break;
 			case CMD_KEY_DOWN:
-				key_type = KEY_DOWN;
+				key_type = CMD_KEY_CODE_DOWN;
 				break;
 			case CMD_KEY_RIGHT:
-				key_type = KEY_RIGHT;
+				key_type = CMD_KEY_CODE_RIGHT;
 				break;
 			case CMD_KEY_LEFT:
-				key_type = KEY_LEFT;
+				key_type = CMD_KEY_CODE_LEFT;
+				break;
+			default:
+				break;
+			}
+		#ifdef _LINUX_
+		}
+		#endif
+		break;
+#ifndef _LINUX_  /* windwos */
+		case CMD_KEY_ARROW2:
+			c = cmd_getch();
+			switch (c) {
+			case CMD_KEY_UP:
+				key_type = CMD_KEY_CODE_UP;
+				break;
+			case CMD_KEY_DOWN:
+				key_type = CMD_KEY_CODE_DOWN;
+				break;
+			case CMD_KEY_RIGHT:
+				key_type = CMD_KEY_CODE_RIGHT;
+				break;
+			case CMD_KEY_LEFT:
+				key_type = CMD_KEY_CODE_LEFT;
 				break;
 			default:
 				break;
 			}
 		break;
+#endif
 	case CMD_KEY_DELETE:
-		key_type = KEY_DELETE;
+		key_type = CMD_KEY_CODE_DELETE;
 		break;
 	case CMD_KEY_BACKSPACE:
 	case CMD_KEY_CTRL_H:
+		/* Linux 下空格后回车无法tab补全与'?'联想 待修复*/
 		break;
 	case '\t':
-		key_type = KEY_TAB;
+		key_type = CMD_KEY_CODE_TAB;
 		break;
 	case '\r':
 	case '\n':
-		key_type = KEY_ENTER;
+		key_type = CMD_KEY_CODE_ENTER;
 		break;
 	case '?':
 		/* BEGIN: Added by weizengke, 2013/10/4   PN:need print '?' */
 		cmd_put_one('?');
 		/* END:   Added by weizengke, 2013/10/4   PN:need print '?' */
-		key_type = KEY_QUEST;
+		key_type = CMD_KEY_CODE_QUEST;
 		break;
 	default:
 		break;
@@ -1560,24 +1690,24 @@ int cmd_resolve(char c)
 /*
 int cmd_resolve(char c)
 {
-	int key_type = KEY_NOTCARE;	// default is not special key
+	int key_type = CMD_KEY_CODE_NOTCARE;	// default is not special key
 
 	switch (c) {
 		case CMD_KEY_ARROW1:
-			if (getch() == CMD_KEY_ARROW2) {
-				c = getch();	// get real key
+			if (cmd_getch() == CMD_KEY_ARROW2) {
+				c = cmd_getch();	// get real key
 				switch (c) {
 					case CMD_KEY_UP:
-						key_type = KEY_UP;
+						key_type = CMD_KEY_CODE_UP;
 						break;
 					case CMD_KEY_DOWN:
-						key_type = KEY_DOWN;
+						key_type = CMD_KEY_CODE_DOWN;
 						break;
 					case CMD_KEY_RIGHT:
-						key_type = KEY_RIGHT;
+						key_type = CMD_KEY_CODE_RIGHT;
 						break;
 					case CMD_KEY_LEFT:
-						key_type = KEY_LEFT;
+						key_type = CMD_KEY_CODE_LEFT;
 						break;
 					default:
 						break;
@@ -1586,17 +1716,17 @@ int cmd_resolve(char c)
 			break;
 		case CMD_KEY_BACKSPACE:
 		case CMD_KEY_CTRL_H:
-			key_type = KEY_DELETE;
+			key_type = CMD_KEY_CODE_DELETE;
 			break;
 		case '\t':
-			key_type = KEY_TAB;
+			key_type = CMD_KEY_CODE_TAB;
 			break;
 		case '\r':
 		case '\n':
-			key_type = KEY_ENTER;
+			key_type = CMD_KEY_CODE_ENTER;
 			break;
 		case '?':
-			key_type = KEY_QUEST;
+			key_type = CMD_KEY_CODE_QUEST;
 			break;
 		default:
 			break;
@@ -1611,16 +1741,16 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 {
 	int i;
 	cmd_vector_t *v;
-	struct para_desc *match[CMD_MAX_MATCH_SIZE];	// matched string
+	struct para_desc *match[CMD_MAX_MATCH_SIZE] = {0};	// matched string
 	int match_size = 0;
 	int match_type = CMD_NO_MATCH;
 	int isNeedMatch = 1;   /* 非TAB场景(无空格)，不需要匹配 */
-	char lcd_str[1024];	// if part match, then use this
+	char lcd_str[1024] = {0};	// if part match, then use this
 	char *last_word = NULL;
 
 	debug_print("TAB for completing command. (buf=%s)", vty->buffer);
 
-	if (g_InputMachine_prev == KEY_TAB)
+	if (g_InputMachine_prev == CMD_KEY_CODE_TAB)
 	{
 		debug_print("TAB for completing command. continue tabMachine. (g_tabbingString=%s)", g_tabbingString);
 		cmd_delete_word(vty);
@@ -1637,8 +1767,8 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 	{
 		debug_print("TAB for completing command. str2vec return is null. (buf=%s)", vty->buffer);
 		/*
-		v = ftf_vector_init(1);
-		ftf_vector_insert(v, '\0');
+		v = cmd_vector_init(1);
+		cmd_vector_insert(v, '\0');
 		*/
 		isNeedMatch = 0;
 	}
@@ -1649,20 +1779,20 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 		isNeedMatch = 0;
 	}
 
-	if (1 == isNeedMatch)
+	if (1 == isNeedMatch && NULL != v)
 	{
 		match_type = cmd_match_command(v, vty, match, &match_size, lcd_str);
 
 		last_word = (char*)cmd_vector_slot(v, cmd_vector_max(v) - 1);
 
-		if (g_InputMachine_prev != KEY_TAB)
+		if (g_InputMachine_prev != CMD_KEY_CODE_TAB)
 		{
 			strcpy(g_tabbingString, last_word);
 		}
 
 		debug_print("TAB for completing command. the last word is (last_word=%s, vector_size=%d)", last_word, cmd_vector_max(v) - 1);
 
-		ftf_vector_deinit(v, 1);
+		cmd_vector_deinit(v, 1);
 	}
 
 	debug_print("TAB for completing command. after cmd_match_command. (match_type=%d)", match_type);
@@ -1675,7 +1805,13 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			break;
 		case CMD_FULL_MATCH:
 			cmd_delete_word(vty);
-			cmd_insert_word(vty, match[0]->para);
+			if (NULL != match[0])
+			{
+				cmd_insert_word(vty, match[0]->para);
+			}
+			/* BEGIN: Added by weizengke, 2013/10/14 for full match then next input*/
+			cmd_insert_word(vty, " ");
+			/* END:   Added by weizengke, 2013/10/14 */
 			cmd_outprompt(vty->prompt);
 			cmd_outstring("%s", vty->buffer);
 			break;
@@ -1694,7 +1830,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			break;
 		case CMD_LIST_MATCH:
 
-			if (g_InputMachine_prev != KEY_TAB)
+			if (g_InputMachine_prev != CMD_KEY_CODE_TAB)
 			{
 				debug_print("TAB for completing command. enter tabMachine. (g_tabString=%s)", g_tabString);
 				memset(g_tabString,0,sizeof(g_tabString));
@@ -1773,7 +1909,7 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 	}
 
 	/* BEGIN: Added by weizengke, 2013/10/5   PN:for cmd end with <CR> */
-	ftf_vector_insert_cr(v);
+	cmd_vector_insert_cr(v);
 	/* END:   Added by weizengke, 2013/10/5   PN:None */
 
 	cmd_outstring("%s", CMD_ENTER);
@@ -1820,10 +1956,12 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 	}
 }
 
+/*
+   1: 完全匹配输入时，只返回该命令的联想  2013-10-27 (未实现)
+*/
 void cmd_resolve_quest(struct cmd_vty *vty)
 {
 	cmd_vector_t *v;
-	struct para_desc *desc_cr = NULL;
 	struct para_desc *match[CMD_MAX_MATCH_SIZE];	// matched string
 	int match_size = 0;
 	int i = 0;
@@ -1835,13 +1973,13 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 	{
 		debug_print("'?' for associating command. after str2vec, v is null (buf=%s)", vty->buffer);
 
-		v = ftf_vector_init(1);
-		ftf_vector_insert_cr(v);
+		v = cmd_vector_init(1);
+		cmd_vector_insert_cr(v);
 	}
 	else if (isspace((int)vty->buffer[vty->used_len - 1]))
 	{
 		debug_print("'?' for associating command. the last one is space (buf=%s)", vty->buffer);
-		ftf_vector_insert_cr(v);
+		cmd_vector_insert_cr(v);
 	}
 
 	debug_print("In cmd_resolve_quest, after str2vec, get %d vector.", v->size);
@@ -1868,13 +2006,13 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 		cmd_outstring("%s", vty->buffer);
 	}
 
-	ftf_vector_deinit(v, 0);
+	cmd_vector_deinit(v, 0);
 }
 
 /* bug of up twice with last key is not up, the hpos not restart */
 void cmd_resolve_up(struct cmd_vty *vty)
 {
-	int try_idx = vty->hpos == 0 ? HISTORY_MAX_SIZE : vty->hpos - 1;
+	int try_idx = vty->hpos == 0 ? (HISTORY_MAX_SIZE - 1) : vty->hpos - 1;
 
 	// if no history
 	if (vty->history[try_idx] == NULL)
@@ -1933,7 +2071,7 @@ void cmd_resolve_delete(struct cmd_vty *vty)
 	if (vty->cur_pos <= 0)
 		return;
 	size = vty->used_len - vty->cur_pos;
-	assert(size >= 0);
+	CMD_DBGASSERT(size >= 0);
 
 	// delete char
 	vty->cur_pos--;
@@ -1958,7 +2096,7 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 	if (vty->used_len >= vty->buf_len)
 		return;
 	size = vty->used_len - vty->cur_pos;
-	assert(size >= 0);
+	CMD_DBGASSERT(size >= 0);
 
 	memcpy(&vty->buffer[vty->cur_pos + 1], &vty->buffer[vty->cur_pos], size);
 	vty->buffer[vty->cur_pos] = vty->c;
@@ -1978,16 +2116,16 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 
 key_handler_t key_resolver[] = {
 	// resolve a whole line
-	{ KEY_TAB, 		cmd_resolve_tab },
-	{ KEY_ENTER, 	cmd_resolve_enter },
-	{ KEY_QUEST, 	cmd_resolve_quest },
-	{ KEY_UP, 		cmd_resolve_up },
-	{ KEY_DOWN, 	cmd_resolve_down },
+	{ CMD_KEY_CODE_TAB, 		cmd_resolve_tab },
+	{ CMD_KEY_CODE_ENTER, 	cmd_resolve_enter },
+	{ CMD_KEY_CODE_QUEST, 	cmd_resolve_quest },
+	{ CMD_KEY_CODE_UP, 		cmd_resolve_up },
+	{ CMD_KEY_CODE_DOWN, 	cmd_resolve_down },
 	// resolve in read buffer
-	{ KEY_LEFT, 	cmd_resolve_left },
-	{ KEY_RIGHT, 	cmd_resolve_right },
-	{ KEY_DELETE, 	cmd_resolve_delete },
-	{ KEY_NOTCARE, 	cmd_resolve_insert },
+	{ CMD_KEY_CODE_LEFT, 	cmd_resolve_left },
+	{ CMD_KEY_CODE_RIGHT, 	cmd_resolve_right },
+	{ CMD_KEY_CODE_DELETE, 	cmd_resolve_delete },
+	{ CMD_KEY_CODE_NOTCARE, 	cmd_resolve_insert },
 };
 /* end resolve */
 
@@ -2016,7 +2154,7 @@ key_handler_t key_resolver[] = {
  * Below is an example, you can copy, paste, modify, and compile
  */
 
-DEFUN(cmd_debug_on_st, "debug on", "Debug switch on", debug_on)
+DEFUN(cmd_debug_on_st, (char*)"debug on", (char*)"Debug switch on", debug_on)
 {
 	if (g_debug_switch == DEBUG_ON)
 	{
@@ -2031,7 +2169,7 @@ DEFUN(cmd_debug_on_st, "debug on", "Debug switch on", debug_on)
 }
 
 
-DEFUN(cmd_debug_off_st, "debug off", "Debug switch off", debug_off)
+DEFUN(cmd_debug_off_st, (char*)"debug off", (char*)"Debug switch off", debug_off)
 {
 
 	if (g_debug_switch == DEBUG_OFF)
@@ -2046,7 +2184,7 @@ DEFUN(cmd_debug_off_st, "debug off", "Debug switch off", debug_off)
 	return 0;
 }
 
-DEFUN(date_elem_st, "date", "Display date-time now", date)
+DEFUN(date_elem_st, (char*)"date", (char*)"Display date-time now", date)
 {
 	if(argc == 0) {
 		time_t	timep = time(NULL);
@@ -2066,20 +2204,20 @@ DEFUN(date_elem_st, "date", "Display date-time now", date)
 }
 
 
-DEFUN(cmd_dhcp_enable_st, "dhcp enable", "Dynamic Host Configuration Protocol", dhcp_enable)
+DEFUN(cmd_dhcp_enable_st, (char*)"dhcp enable", (char*)"Dynamic Host Configuration Protocol", dhcp_enable)
 {
 	printf("Info: dhcp enable successful.\n");
 	return 0;
 }
 
-DEFUN(cmd_dhcp_disable_st, "dhcp enable", "Dynamic Host Configuration Protocol", dhcp_disable)
+DEFUN(cmd_dhcp_disable_st, (char*)"dhcp enable", (char*)"Dynamic Host Configuration Protocol", dhcp_disable)
 {
 	printf("Info: dhcp disable successful.\n");
 	return 0;
 }
 
 
-DEFUN(cmd_stp_enable_st, "stp enable", "Spanning tree protocol", stp_enable)
+DEFUN(cmd_stp_enable_st, (char*)"stp enable", (char*)"Spanning tree protocol", stp_enable)
 {
 	//printf("argc=%d, %s %s", argc, argv[0], argv[1]);
 
@@ -2088,7 +2226,7 @@ DEFUN(cmd_stp_enable_st, "stp enable", "Spanning tree protocol", stp_enable)
 	return 0;
 }
 
-DEFUN(cmd_stp_disable_st, "stp disable", "Spanning tree protocol", stp_disable)
+DEFUN(cmd_stp_disable_st, (char*)"stp disable", (char*)"Spanning tree protocol", stp_disable)
 {
 	//printf("argc=%d, %s %s", argc, argv[0], argv[1]);
 
@@ -2097,7 +2235,7 @@ DEFUN(cmd_stp_disable_st, "stp disable", "Spanning tree protocol", stp_disable)
 	return 0;
 }
 
-DEFUN(cmd_display_clock_st, "display clock", "Display clock of device", display_clock)
+DEFUN(cmd_display_clock_st, (char*)"display clock", (char*)"Display clock of device", display_clock)
 {
 	time_t	timep = time(NULL);
 	struct tm *p;
@@ -2111,46 +2249,46 @@ DEFUN(cmd_display_clock_st, "display clock", "Display clock of device", display_
 	return 0;
 }
 
-DEFUN(cmd_display_computer_st, "display computer", "Display computer information", display_computer)
+DEFUN(cmd_display_computer_st, (char*)"display computer", (char*)"Display computer information", display_computer)
 {
 	printf("This is Jungle Wei's computer.\n");
 	return 0;
 }
 
-DEFUN(cmd_display_version_st, "display version", "Display device version", display_version)
+DEFUN(cmd_display_version_st, (char*)"display version", (char*)"Display device version", display_version)
 {
 	printf("Common command-line system Version 0.0.1 Beta.\n");
 	return 0;
 }
 
-DEFUN(cmd_display_stp_st, "display stp", "Display stp information", display_stp)
+DEFUN(cmd_display_stp_st, (char*)"display stp", (char*)"Display stp information", display_stp)
 {
 	printf("Test command 'display stp'.\n");
 	return 0;
 }
 
 
-DEFUN(cmd_display_stp_brief_st, "display stp brief", "Display stp brief information", display_stp_brief)
+DEFUN(cmd_display_stp_brief_st, (char*)"display stp brief", (char*)"Display stp brief information", display_stp_brief)
 {
 	printf("Test command 'display stp brief'.\n");
 	return 0;
 }
 
-DEFUN(cmd_display_stp_verbose_st, "display stp verbose", "Display device version", display_stp_verbose)
+DEFUN(cmd_display_stp_verbose_st, (char*)"display stp verbose", (char*)"Display device version", display_stp_verbose)
 {
 	printf("Test command 'display stp verbose'.\n");
 
 	return 0;
 }
 
-DEFUN(cmd_virtual_judge_enable_st, "virtual-judge enable", "Enable virtual judge", virtual_judge_enable)
+DEFUN(cmd_virtual_judge_enable_st, (char*)"virtual-judge enable", (char*)"Enable virtual judge", virtual_judge_enable)
 {
 	printf("Info: virtual judge enable successful, support hdoj virtual-judge only.\n");
 
 	return 0;
 }
 
-DEFUN(cmd_undo_virtual_judge_enable_st, "undo virtual-judge enable", "Undo enable virtual judge", undo_virtual_judge_enable)
+DEFUN(cmd_undo_virtual_judge_enable_st, (char*)"undo virtual-judge enable", (char*)"Undo enable virtual judge", undo_virtual_judge_enable)
 {
 	printf("Info: virtual judge is disable successful.\n");
 
@@ -2158,14 +2296,14 @@ DEFUN(cmd_undo_virtual_judge_enable_st, "undo virtual-judge enable", "Undo enabl
 }
 
 
-DEFUN(cmd_disable_st, "disable", "disable", disable)
+DEFUN(cmd_disable_st, (char*)"disable", (char*)"disable", disable)
 {
 	printf("Info: disable.\n");
 
 	return 0;
 }
 
-DEFUN(cmd_display_st, "display", "display", display)
+DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
 {
 	printf("Info: display.\n");
 	return 0;
@@ -2173,9 +2311,9 @@ DEFUN(cmd_display_st, "display", "display", display)
 
 
 
-DEFUN(cmd_sysname_st, "sysname STRING<1-24>", "set system name", sysname)
+DEFUN(cmd_sysname_st, (char*)"sysname STRING<1-24>", (char*)"set system name", sysname)
 {
-	assert(argv[1] != 0);
+	CMD_DBGASSERT(argv[1] != 0);
 
 	strcpy(g_sysname, argv[1]);
 
@@ -2184,7 +2322,7 @@ DEFUN(cmd_sysname_st, "sysname STRING<1-24>", "set system name", sysname)
 	return 0;
 }
 
-DEFUN(cmd_display_history_st, "display history", "Display history command", display_history)
+DEFUN(cmd_display_history_st, (char*)"display history", (char*)"Display history command", display_history)
 {
 	int try_idx = 0;
 	int i = 0;
@@ -2207,14 +2345,14 @@ DEFUN(cmd_display_history_st, "display history", "Display history command", disp
 }
 
 
-DEFUN(cmd_display_history_n_st, "display history INTEGER<1-100>", "Display history command", display_history_n)
+DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)"Display history command", display_history_n)
 {
 	int n = 0;
 	int i = 0;
 
 	debug_print("%d %s %s %s\n", argc, argv[0], argv[1], argv[2]);
 
-	assert(argv[2]);
+	CMD_DBGASSERT(argv[2]);
 
 	n = atoi(argv[2]);
 
@@ -2239,13 +2377,13 @@ DEFUN(cmd_display_history_n_st, "display history INTEGER<1-100>", "Display histo
 	return 0;
 }
 
-DEFUN(cmd_loopback_internal_st, "loopback internal", "loopback internal", loopback_internal)
+DEFUN(cmd_loopback_internal_st, (char*)"loopback internal", (char*)"loopback internal", loopback_internal)
 {
 	printf("Info: loopback internal.\n");
 	return 0;
 }
 
-DEFUN(cmd_loopback_detect_enable_st, "loopback-detect enable", "loopback-detect enable", loopback_detect_enable)
+DEFUN(cmd_loopback_detect_enable_st, (char*)"loopback-detect enable", (char*)"loopback-detect enable", loopback_detect_enable)
 {
 	printf("Info: loopback-detect enable.\n");
 	return 0;
@@ -2255,7 +2393,7 @@ DEFUN(cmd_loopback_detect_enable_st, "loopback-detect enable", "loopback-detect 
 void cmd_init()
 {
 	// initial cmd vector
-	cmd_vec = ftf_vector_init(1);
+	cmd_vec = cmd_vector_init(1);
 
 	//reg cmd-element
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CR, 			CMD_ELEM_TYPE_END,			"<CR>",			    ""               );
@@ -2352,17 +2490,17 @@ void cmd_read(struct cmd_vty *vty)
 {
 	int key_type;
 
-	g_InputMachine_prev = KEY_NOTCARE;
-	g_InputMachine_now = KEY_NOTCARE;
+	g_InputMachine_prev = CMD_KEY_CODE_NOTCARE;
+	g_InputMachine_now = CMD_KEY_CODE_NOTCARE;
 
-	while ((vty->c = getch()) != EOF) {
+	while ((vty->c = cmd_getch()) != EOF) {
 		// step 1: get input key type
 		key_type = cmd_resolve(vty->c);
 
 		g_InputMachine_now = key_type;
 
 
-		if (key_type <= KEY_NONE || key_type > KEY_NOTCARE) {
+		if (key_type <= CMD_KEY_CODE_NONE || key_type > CMD_KEY_CODE_NOTCARE) {
 			debug_print("Unidentify Key Type, c = %c, key_type = %d\n", vty->c, key_type);
 			continue;
 		}
@@ -2371,7 +2509,7 @@ void cmd_read(struct cmd_vty *vty)
 		key_resolver[key_type].key_func(vty);
 		g_InputMachine_prev = g_InputMachine_now;
 
-		if (g_InputMachine_now != KEY_TAB)
+		if (g_InputMachine_now != CMD_KEY_CODE_TAB)
 		{
 			memset(g_tabString,0,sizeof(g_tabString));
 			memset(g_tabbingString,0,sizeof(g_tabbingString));
@@ -2393,7 +2531,7 @@ void cmd_clear_line(struct cmd_vty *vty)
 {
 	int size = vty->used_len - vty->cur_pos;
 
-	assert(size >= 0);
+	CMD_DBGASSERT(size >= 0);
 	while (size--) {
 		cmd_put_one(' ');
 	}
