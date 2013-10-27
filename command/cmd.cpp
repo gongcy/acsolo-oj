@@ -114,8 +114,7 @@ int g_debug_switch = DEBUG_DISABLE;
 /* END:   Added by weizengke, 2013/10/27 */
 
 
-
-char g_sysname[CMD_MAX_SYSNAME_SIZE] = "cmd-sys";
+char g_sysname[CMD_MAX_SYSNAME_SIZE] = "Jungle";
 
 #define _CMDDEF_
 #ifndef  _CMDDEF_
@@ -469,6 +468,7 @@ enum CMD_ELEM_ID_EM {
 	CMD_ELEM_ID_DEBUG_INFO,
 	CMD_ELEM_ID_DEBUG_MSG,
 	CMD_ELEM_ID_DEBUG_FSM,
+	CMD_ELEM_ID_DEBUG_ALL,
 
 	CMD_ELEM_ID_MAX,
 };
@@ -878,11 +878,7 @@ void cmd_vector_insert_cr(cmd_vector_t *v)
 	}
 
 	memcpy(string_cr, "<CR>", sizeof("<CR>"));
-	cmd_vector_insert(v, string_cr);
-
-	/*
-	  cmd_vector_insert(v, "<CR>"); // bug of memory free("<CR>"), it's static memory
-	*/
+	cmd_vector_insert(v, string_cr); /* cmd_vector_insert(v, "<CR>"); // bug of memory free("<CR>"), it's static memory*/
 }
 
 cmd_vector_t *str2vec(char *string)
@@ -951,6 +947,11 @@ static int match_unique_string(struct para_desc **match, char *str, int size)
 			return 0;
 	}
 	return 1;
+}
+
+int comp(const  void* a, const  void *b)
+{
+	return strcmp(((struct para_desc *)a)->para, ((struct para_desc *)b)->para);
 }
 
 // turn a command into vector
@@ -1174,7 +1175,7 @@ int cmd_match_special_string(char *icmd, char *dest)
 
 	if (cmd_get_range_symbol(dest, &dest_type, &a, &b))
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_match_special_string, cmd_get_range_symbol fail, (dest_type=%d,a=%d,b=%d)", dest_type, a, b);
+		//debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_match_special_string, cmd_get_range_symbol fail, (dest_type=%d,a=%d,b=%d)", dest_type, a, b);
 		return CMD_ERR;
 	}
 
@@ -1503,6 +1504,25 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 
 	cmd_vector_deinit(cmd_vec_copy, 0);	// free cmd_vec_copy, no longer use
 
+	/* BEGIN: Added by weizengke, 2013/10/27 sort for ? complete */
+	{
+		int j;
+		for (i = 0; i < match_num - 1; i++)
+		{
+			for (j = i; j < match_num; j++)
+			{
+				struct para_desc *para_desc__ = NULL;
+				if (1 == strcmp(match[i]->para, match[j]->para))
+				{
+					para_desc__ = match[i];
+					match[i] =  match[j];
+					match[j] = para_desc__;
+				}
+			}
+		}
+	}
+	/* END: Added by weizengke, 2013/10/27 sort for ? complete */
+
 	*match_size = match_num;
 
 	return 0;
@@ -1582,7 +1602,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	}
 	/* END:   Added by weizengke, 2013/10/6   PN:None */
 
-	/* BEGIN: Added by weizengke, 2013/10/5   PN:push param into function stack */
+	/* BEGIN: Added by weizengke, 2013/10/5  for support argv. PN:push param into function stack */
 	/* now icmd_vec and match_elem will be the same vector ,can push into function stack */
 	int argc = 0;
 	char *argv[CMD_MAX_CMD_NUM];
@@ -1903,6 +1923,12 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			/* END:   Added by weizengke, 2013/10/14 */
 			cmd_outprompt(vty->prompt);
 			cmd_outstring("%s", vty->buffer);
+
+			/* BEGIN: Added by weizengke, 2013/10/27 PN: for bug of CMD_FULL_MATCH and then continue TAB*/
+			memset(g_tabString,0,sizeof(g_tabString));
+			memset(g_tabbingString,0,sizeof(g_tabbingString));
+			/* END:   Added by weizengke, 2013/10/27 */
+
 			break;
 		case CMD_PART_MATCH:
 			/*  delete at 2013-10-05
@@ -2248,32 +2274,32 @@ key_handler_t key_resolver[] = {
  * Below is an example, you can copy, paste, modify, and compile
  */
 
-DEFUN(cmd_debug_enable_st, (char*)"debug enable", (char*)"Debug switch on", debug_enable)
+DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging switch on", Debugging_enable)
 {
 	if (g_debug_switch == DEBUG_ENABLE)
 	{
-		printf("Info: debug switch is already enable.\n");
+		printf("Info: debugging switch is already enable.\n");
 		return 0;
 	}
 
 	g_debug_switch = DEBUG_ENABLE;
-	printf("Info: debug switch is enable.\n");
+	printf("Info: debugging switch is enable.\n");
 
 	return 0;
 }
 
 
-DEFUN(cmd_undo_debug_enable_st, (char*)"undo debug enable", (char*)"Debug switch off", undo_debug_enable)
+DEFUN(cmd_undo_debugging_enable_st, (char*)"undo debugging enable", (char*)"Debugging switch off", undo_debugging_enable)
 {
 
 	if (g_debug_switch == DEBUG_DISABLE)
 	{
-		printf("Info: debug switch is already disable.\n");
+		printf("Info: debugging switch is already disable.\n");
 		return 0;
 	}
 
 	g_debug_switch = DEBUG_DISABLE;
-	printf("Info: debug switch is disable.\n");
+	printf("Info: debugging switch is disable.\n");
 
 	return 0;
 }
@@ -2494,93 +2520,125 @@ DEFUN(cmd_disable_loopback_detect_st, (char*)"disable loopback-detect", (char*)"
 	return 0;
 }
 
-DEFUN(cmd_debug_error_st, (char*)"debug error", (char*)"open debug error switch", debug_error)
+DEFUN(cmd_debugging_error_st, (char*)"debugging error", (char*)"open debugging error switch", debugging_error)
 {
 	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_ERROR);
-	printf("Info: debug error switch is on.\r\n");
+	printf("Info: debugging error switch is on.\r\n");
 	return 0;
 }
 
-DEFUN(cmd_undo_debug_error_st, (char*)"undo debug error", (char*)"close debug error switch", undo_debug_error)
+DEFUN(cmd_undo_debugging_error_st, (char*)"undo debugging error", (char*)"close debugging error switch", undo_debugging_error)
 {
 	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_ERROR);
-	printf("Info: debug error switch is off.\r\n");
+	printf("Info: debugging error switch is off.\r\n");
 	return 0;
 }
 
-DEFUN(cmd_debug_function_st, (char*)"debug function", (char*)"open debug function switch", debug_function)
+DEFUN(cmd_debugging_function_st, (char*)"debugging function", (char*)"open debugging function switch", debugging_function)
 {
 	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_FUNC);
-	printf("Info: debug function switch is on.\r\n");
+	printf("Info: debugging function switch is on.\r\n");
 	return 0;
 }
 
-DEFUN(cmd_undo_debug_function_st, (char*)"undo debug function", (char*)"close debug function switch", undo_debug_function)
+DEFUN(cmd_undo_debugging_function_st, (char*)"undo debugging function", (char*)"Close debugging function switch", undo_debugging_function)
 {
 	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_FUNC);
-	printf("Info: debug function switch is off.\r\n");
+	printf("Info: debugging function switch is off.\r\n");
 	return 0;
 }
 
-DEFUN(cmd_debug_info_st, (char*)"debug info", (char*)"open debug info switch", debug_info)
+DEFUN(cmd_debugging_info_st, (char*)"debugging info", (char*)"Open debugging info switch", debugging_info)
 {
 	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_INFO);
-	printf("Info: debug info switch is on.\r\n");
+	printf("Info: debugging info switch is on.\r\n");
 	return 0;
 }
 
-DEFUN(cmd_undo_debug_info_st, (char*)"undo debug info", (char*)"close debug info switch", undo_debug_info)
+DEFUN(cmd_undo_debugging_info_st, (char*)"undo debugging info", (char*)"close debugging info switch", undo_debugging_info)
 {
 	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_INFO);
 	printf("Info: debug info switch is off.\r\n");
 	return 0;
 }
 
-DEFUN(cmd_debug_message_st, (char*)"debug message", (char*)"open debug message switch", debug_message)
+DEFUN(cmd_debugging_message_st, (char*)"debugging message", (char*)"Open debugging message switch", debugging_message)
 {
 	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_MSG);
 	printf("Info: debug message switch is on.\r\n");
 	return 0;
 }
 
-DEFUN(cmd_undo_debug_message_st, (char*)"undo debug message", (char*)"close debug message switch", undo_debug_message)
+DEFUN(cmd_undo_debugging_message_st, (char*)"undo debugging message", (char*)"close debugging message switch", undo_debugging_message)
 {
 	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_MSG);
-	printf("Info: debug message switch is off.\r\n");
+	printf("Info: debugging message switch is off.\r\n");
 	return 0;
 }
 
-DEFUN(cmd_debug_fsm_st, (char*)"debug fsm", (char*)"open debug fsm switch", debug_fsm)
+DEFUN(cmd_debugging_fsm_st, (char*)"debugging fsm", (char*)"open debugging fsm switch", debugging_fsm)
 {
 	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_FSM);
-	printf("Info: debug fsm switch is on.\r\n");
+	printf("Info: debugging fsm switch is on.\r\n");
 	return 0;
 }
 
-DEFUN(cmd_undo_debug_fsm_st, (char*)"undo debug fsm", (char*)"close debug fsm switch", undo_debug_fsm)
+DEFUN(cmd_undo_debugging_fsm_st, (char*)"undo debugging fsm", (char*)"close debugging fsm switch", undo_debugging_fsm)
 {
 	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_FSM);
-	printf("Info: debug message switch is off.\r\n");
+	printf("Info: debugging message switch is off.\r\n");
 	return 0;
 }
 
+DEFUN(cmd_debugging_all_st, (char*)"debugging all", (char*)"open debugging all switch", debugging_all)
+{
+	int i;
+	for (i = CMD_DEBUG_TYPE_NONE + 1; i < CMD_DEBUG_TYPE_MAX; i++ )
+	{
+		CMD_DEBUGMASK_SET(i);
+	}
 
-DEFUN(cmd_display_debug_st, (char*)"display debug", (char*)"display debug switch", display_debug)
+	printf("Info: debugging all switch is on.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_undo_debugging_all_st, (char*)"undo debugging all", (char*)"close debugging all switch", undo_debugging_all)
+{
+	int i;
+	for (i = CMD_DEBUG_TYPE_NONE + 1; i < CMD_DEBUG_TYPE_MAX; i++ )
+	{
+		CMD_DEBUGMASK_CLEAR(i);
+	}
+
+	printf("Info: debugging all switch is off.\r\n");
+	return 0;
+
+}
+
+DEFUN(cmd_display_debugging_st, (char*)"display debugging", (char*)"display debugging switch", display_debugging)
 {
 	int i = 0;
+	if (g_debug_switch == DEBUG_ENABLE)
+	{
+		printf("Global debugging is enable.\r\n");
+	}
+	else
+	{
+		printf("Global debugging is disable.\r\n");
+	}
 
-	printf("	    DebugMask(0x%x", g_aulDebugMask[0]);
+	printf(" DebugMask(0x%x", g_aulDebugMask[0]);
 	for (i = 1; i < CMD_DEBUG_TYPE_MAX/CMD_MASKLENTG + 1 ; i++)
 	{
 		printf("	,0x%x", g_aulDebugMask[i]);
 	}
-	printf(")\r\n");
+	printf(").\r\n");
 
 	for (i = CMD_DEBUG_TYPE_NONE + 1; i < CMD_DEBUG_TYPE_MAX; i++ )
 	{
 		if (CMD_DEBUGMASK_GET(i))
 		{
-			printf(" Debug %s switch is on.\r\n", szDebugName[i]);
+			printf(" Debugging %s switch is on.\r\n", szDebugName[i]);
 		}
 	}
 
@@ -2595,8 +2653,8 @@ void cmd_init()
 
 	//reg cmd-element
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CR, 			CMD_ELEM_TYPE_END,			"<CR>",			    ""               );
-	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO24,   CMD_ELEM_TYPE_STRING,       "STRING<1-24>",     "String lenth range form 1 to 24");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO24,  CMD_ELEM_TYPE_INTEGER,      "INTEGER<1-100>",   "Integer range form 1 to 100");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO24,  CMD_ELEM_TYPE_STRING,       "STRING<1-24>",     "String lenth range form 1 to 24");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO24, CMD_ELEM_TYPE_INTEGER,      "INTEGER<1-100>",   "Integer range form 1 to 100");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_SYSNAME, 		CMD_ELEM_TYPE_KEY,   		"sysname",          "Set system name");
 
@@ -2604,7 +2662,7 @@ void cmd_init()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_ENABLE, 		CMD_ELEM_TYPE_KEY,   		"enable",			"Enable operation");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_DISABLE, 		CMD_ELEM_TYPE_KEY,   		"disable",			"Disable operation");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_DISPLAY, 		CMD_ELEM_TYPE_KEY,   		"display",			"Display");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG,         CMD_ELEM_TYPE_KEY,   		"debug",			"Debug switch");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG,        CMD_ELEM_TYPE_KEY,   		"debugging",		"Debugging switch");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_ON, 			CMD_ELEM_TYPE_KEY,   		"on",				"Debug switch open");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_OFF, 			CMD_ELEM_TYPE_KEY,   		"off",				"Debug switch close");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_DATE, 			CMD_ELEM_TYPE_KEY,   		"date",				"Show date-time now");
@@ -2612,13 +2670,13 @@ void cmd_init()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_VERSION, 		CMD_ELEM_TYPE_KEY,   		"version",			"Show version of solfware");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STP, 			CMD_ELEM_TYPE_KEY,   		"stp",				"Spanning tree protocol");
 
-	cmd_reg_newcmdelement(CMD_ELEM_ID_CLOCK,         CMD_ELEM_TYPE_KEY,   		"clock",			"Show clock now");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_CLOCK,        CMD_ELEM_TYPE_KEY,   		"clock",			"Show clock now");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_COMPUTER, 		CMD_ELEM_TYPE_KEY,   		"computer",			"Show computer information");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_HISTTORY, 		CMD_ELEM_TYPE_KEY,   		"history",			"Histrory command");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_BRIEF,         CMD_ELEM_TYPE_KEY,   		"brief",			"Brief information");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_BRIEF,        CMD_ELEM_TYPE_KEY,   		"brief",			"Brief information");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_VERBOSE, 		CMD_ELEM_TYPE_KEY,   		"verbose",			"Verbose information");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_VJUDGE,	        CMD_ELEM_TYPE_KEY,   		"virtual-judge", 	"Virtual judge");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_VJUDGE,	    CMD_ELEM_TYPE_KEY,   		"virtual-judge", 	"Virtual judge");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_LOOPBACK,		CMD_ELEM_TYPE_KEY,   		"loopback", 		"Loopback");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_LOOPBACK_DETECT,CMD_ELEM_TYPE_KEY,   		"loopback-detect", 	"loopback-detect protocol");
@@ -2630,6 +2688,7 @@ void cmd_init()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_MSG,    CMD_ELEM_TYPE_KEY,			"message",			"Message");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_FSM,    CMD_ELEM_TYPE_KEY,			"fsm",				"Finite State Machine");
 
+	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_ALL,    CMD_ELEM_TYPE_KEY,			"all",				"All");
 
 	// install command
 	// ---------------------------------------------------
@@ -2637,8 +2696,8 @@ void cmd_init()
 
 	install_element(&cmd_sysname_st);
 
-	install_element(&cmd_debug_enable_st);
- 	install_element(&cmd_undo_debug_enable_st);
+	install_element(&cmd_debugging_enable_st);
+ 	install_element(&cmd_undo_debugging_enable_st);
 
 	install_element(&cmd_stp_enable_st);
 	install_element(&cmd_stp_disable_st);
@@ -2669,22 +2728,27 @@ void cmd_init()
 	install_element(&cmd_display_loopback_st);
 	install_element(&cmd_disable_loopback_detect_st);
 
-	install_element(&cmd_debug_error_st);
-	install_element(&cmd_undo_debug_error_st);
+	install_element(&cmd_debugging_error_st);
+	install_element(&cmd_undo_debugging_error_st);
 
-	install_element(&cmd_debug_function_st);
-	install_element(&cmd_undo_debug_function_st);
+	install_element(&cmd_debugging_function_st);
+	install_element(&cmd_undo_debugging_function_st);
 
-	install_element(&cmd_debug_info_st);
-	install_element(&cmd_undo_debug_info_st);
+	install_element(&cmd_debugging_info_st);
+	install_element(&cmd_undo_debugging_info_st);
 
-	install_element(&cmd_debug_message_st);
-	install_element(&cmd_undo_debug_message_st);
+	install_element(&cmd_debugging_message_st);
+	install_element(&cmd_undo_debugging_message_st);
 
-	install_element(&cmd_debug_fsm_st);
-	install_element(&cmd_undo_debug_fsm_st);
+	install_element(&cmd_debugging_fsm_st);
+	install_element(&cmd_undo_debugging_fsm_st);
 
-	install_element(&cmd_display_debug_st);
+
+	install_element(&cmd_debugging_all_st);
+	install_element(&cmd_undo_debugging_all_st);
+
+	install_element(&cmd_display_debugging_st);
+
 	// ---------------------------------------------------
 
 /*
