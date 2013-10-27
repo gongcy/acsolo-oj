@@ -75,10 +75,45 @@ Note:
 #define CMD_YES 1
 #define CMD_NO  0
 
-#define DEBUG_OFF 0
-#define DEBUG_ON  1
+#define DEBUG_DISABLE 0
+#define DEBUG_ENABLE  1
 
-int g_debug_switch = DEBUG_OFF;
+/* BEGIN: Added by weizengke, 2013/10/27  for debug switch*/
+enum CMD_DEBUG_TYPE_EM
+{
+	CMD_DEBUG_TYPE_NONE,
+
+	CMD_DEBUG_TYPE_ERROR,
+	CMD_DEBUG_TYPE_FUNC,
+	CMD_DEBUG_TYPE_INFO,
+	CMD_DEBUG_TYPE_MSG,
+	CMD_DEBUG_TYPE_FSM,
+
+	CMD_DEBUG_TYPE_MAX,
+};
+
+char *szDebugName[CMD_DEBUG_TYPE_MAX] = {
+	"none",
+	"error",
+	"function",
+	"info",
+	"message",
+	"fsm",
+};
+
+#define CMD_DEBUG_TYPE_ISVALID(x) (x>CMD_DEBUG_TYPE_NONE && x<CMD_DEBUG_TYPE_MAX)
+
+#define CMD_MASKLENTG 32
+unsigned long g_aulDebugMask[CMD_DEBUG_TYPE_MAX/CMD_MASKLENTG + 1] = {0};
+int g_debug_switch = DEBUG_DISABLE;
+
+#define CMD_DEBUGMASK_GET(x) (( g_aulDebugMask[(x)/CMD_MASKLENTG] >> ((x)%CMD_MASKLENTG) ) & 1)
+#define CMD_DEBUGMASK_SET(x) ( g_aulDebugMask[(x)/CMD_MASKLENTG] |= ( 1 << (x)%CMD_MASKLENTG ) )
+#define CMD_DEBUGMASK_CLEAR(x) ( g_aulDebugMask[(x)/CMD_MASKLENTG] ^= ( 1 << (x)%CMD_MASKLENTG ) )
+
+/* END:   Added by weizengke, 2013/10/27 */
+
+
 
 char g_sysname[CMD_MAX_SYSNAME_SIZE] = "cmd-sys";
 
@@ -101,9 +136,44 @@ typedef unsigned char UCHAR;
 
 #define CMD_NOUSED(x) ((x) = (x))
 
+void debug_print_ex(CMD_DEBUG_TYPE_EM type, const char *format, ...)
+{
+
+	if (g_debug_switch == DEBUG_DISABLE)
+	{
+		return;
+	}
+
+
+	if (!CMD_DEBUG_TYPE_ISVALID(type))
+	{
+		return;
+	}
+
+	if (!CMD_DEBUGMASK_GET(type))
+	{
+		return;
+	}
+
+	time_t  timep = time(NULL);
+	struct tm *p;
+
+    p = localtime(&timep);
+    p->tm_year = p->tm_year + 1900;
+    p->tm_mon = p->tm_mon + 1;
+
+	printf("<DEBUG - %04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
+	va_list args;
+	va_start(args, format);
+	vprintf(format, args);
+	va_end(args);
+	printf("\r\n");
+}
+
+
 void debug_print(const char *format, ...)
 {
-	if (g_debug_switch == DEBUG_OFF)
+	if (g_debug_switch == DEBUG_DISABLE)
 	{
 		return;
 	}
@@ -393,6 +463,13 @@ enum CMD_ELEM_ID_EM {
 
 	CMD_ELEM_ID_INTERNAL,
 
+
+	CMD_ELEM_ID_DEBUG_ERROR,
+	CMD_ELEM_ID_DEBUG_FUNC,
+	CMD_ELEM_ID_DEBUG_INFO,
+	CMD_ELEM_ID_DEBUG_MSG,
+	CMD_ELEM_ID_DEBUG_FSM,
+
 	CMD_ELEM_ID_MAX,
 };
 
@@ -404,15 +481,15 @@ int cmd_get_elemid_by_name(int *cmd_elem_id, char *cmd_name)
 
 	if (cmd_elem_id == NULL || cmd_name == NULL)
 	{
-		debug_print("In cmd_get_elemid_by_name, param is null");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_get_elemid_by_name, param is null");
 		return 1;
 	}
 
-	debug_print("In cmd_get_elemid_by_name.(cmd_elem_id=%d, cmd_name=%s)", cmd_elem_id, cmd_name);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_get_elemid_by_name.(cmd_elem_id=%d, cmd_name=%s)", cmd_elem_id, cmd_name);
 
 	for (i = 0; i < CMD_ELEM_ID_MAX; i++)
 	{
-		debug_print("In cmd_get_elemid_by_name, loop -> %d. (para=%s)", i, g_cmd_elem[i].para);
+		debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_get_elemid_by_name, loop -> %d. (para=%s)", i, g_cmd_elem[i].para);
 		if (0 == strcmp(cmd_name, g_cmd_elem[i].para))
 		{
 			*cmd_elem_id = i;
@@ -428,13 +505,13 @@ int cmd_get_elem_by_id(int cmd_elem_id, struct para_desc *cmd_elem)
 {
 	if (cmd_elem == NULL)
 	{
-		debug_print("In cmd_get_elem_by_id, param is null");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_get_elem_by_id, param is null");
 		return 1;
 	}
 
 	if (cmd_elem_id <= CMD_ELEM_ID_NONE || cmd_elem_id >=  CMD_ELEM_ID_MAX)
 	{
-		debug_print("In cmd_get_elem_by_id, cmd_elem_id is invalid");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_get_elem_by_id, cmd_elem_id is invalid");
 		return 1;
 	}
 
@@ -449,7 +526,7 @@ int cmd_get_elem_by_name(char *cmd_name, struct para_desc *cmd_elem)
 
 	if (cmd_name == NULL || cmd_elem == NULL)
 	{
-		debug_print("In cmd_get_elem_by_name, param is null");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_get_elem_by_name, param is null");
 		return 1;
 	}
 
@@ -460,7 +537,7 @@ int cmd_get_elem_by_name(char *cmd_name, struct para_desc *cmd_elem)
 			continue;
 		}
 
-		debug_print("In cmd_get_elem_by_name, loop -> %d. (para=%s)", i, g_cmd_elem[i].para);
+		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_get_elem_by_name, loop -> %d. (para=%s)", i, g_cmd_elem[i].para);
 
 		if (0 == strcmp(cmd_name, g_cmd_elem[i].para))
 		{
@@ -498,14 +575,14 @@ int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, const
 	g_cmd_elem[cmd_elem_id].para = (char*)malloc(strlen(cmd_name) + 1);
 	if (g_cmd_elem[cmd_elem_id].para == NULL)
 	{
-		debug_print("malloc memory for para fail in regNewCmdElement.");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "malloc memory for para fail in regNewCmdElement.");
 		return 1;
 	}
 
 	g_cmd_elem[cmd_elem_id].desc = (char*)malloc(strlen(cmd_help) + 1);
 	if (g_cmd_elem[cmd_elem_id].desc == NULL)
 	{
-		debug_print("malloc memory for desc fail in regNewCmdElement.");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "malloc memory for desc fail in regNewCmdElement.");
 		free(g_cmd_elem[cmd_elem_id].para);
 		return 1;
 	}
@@ -515,7 +592,7 @@ int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, const
 	strcpy(g_cmd_elem[cmd_elem_id].para, cmd_name);
 	strcpy(g_cmd_elem[cmd_elem_id].desc, cmd_help);
 
-	debug_print("cmd_reg_newcmdelement(%d %d %s %s) ok.",
+	debug_print_ex(CMD_DEBUG_TYPE_MSG, "cmd_reg_newcmdelement(%d %d %s %s) ok.",
 				cmd_elem_id,
 				cmd_elem_type,
 				g_cmd_elem[cmd_elem_id].para,
@@ -638,7 +715,7 @@ struct cmd_vty *cmd_vty_init()
 
 	vty = (struct cmd_vty *)calloc(1, sizeof(struct cmd_vty));
 	if(vty == NULL) {
-		debug_print("In cmd_vty_init, Not Enough Memory For vty%s", CMD_ENTER);
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vty_init, Not Enough Memory For vty%s", CMD_ENTER);
 		return NULL;
 	}
 
@@ -703,10 +780,10 @@ static int cmd_vector_fetch(cmd_vector_t *v)
 
 	// allocate new memory if not enough slot
 	while (v->size < fetch_idx + 1) {
-		debug_print("In cmd_vector_fetch, realloc memory for data.");
+		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_vector_fetch, realloc memory for data.");
 		v->data = (void**)realloc(v->data, sizeof(void *) * v->size * 2);
 		if (!v->data) {
-			debug_print("In cmd_vector_fetch, Not Enough Memory For data");
+			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vector_fetch, Not Enough Memory For data");
 			return -1;
 		}
 		memset(&v->data[v->size], 0, sizeof(void *) * v->size);
@@ -720,7 +797,7 @@ cmd_vector_t *cmd_vector_init(int size)
 {
 	cmd_vector_t *v = (cmd_vector_t *)calloc(1, sizeof(struct cmd_vector));
 	if (v == NULL) {
-		debug_print("In cmd_vector_init, Not Enough Memory For cmd_vector");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vector_init, Not Enough Memory For cmd_vector");
 		return NULL;
 	}
 
@@ -729,7 +806,7 @@ cmd_vector_t *cmd_vector_init(int size)
 		size = 1;
 	v->data = (void**)calloc(1, sizeof(void *) * size);
 	if (v->data == NULL) {
-		debug_print("In cmd_vector_init, Not Enough Memory For data");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vector_init, Not Enough Memory For data");
 		free(v);
 		return NULL;
 	}
@@ -841,7 +918,7 @@ cmd_vector_t *str2vec(char *string)
 		token = (char *)malloc(sizeof(char) * (str_len + 1));
 		if (NULL == token)
 		{
-			debug_print("In str2vec, There is no memory for param token.");
+			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In str2vec, There is no memory for param token.");
 			return NULL;
 		}
 
@@ -910,7 +987,7 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 		token = (char*)malloc(len + 1);
 		if (NULL == token)
 		{
-			debug_print("In cmd2vec, There is no memory for param token.");
+			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2vec, There is no memory for param token.");
 			return NULL;
 		}
 
@@ -930,7 +1007,7 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 			d_token = (char*)malloc(d_len + 1);
 			if (NULL == d_token)
 			{
-				debug_print("In cmd2vec, There is no memory for param d_token.");
+				debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2vec, There is no memory for param d_token.");
 				free(token);
 				return NULL;
 			}
@@ -943,7 +1020,7 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 		desc = (struct para_desc *)calloc(1, sizeof(struct para_desc));
 		if (desc == NULL)
 		{
-			debug_print("In cmd2Vec, calloc for desc fail. (token=%s)", token);
+			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2Vec, calloc for desc fail. (token=%s)", token);
 			free(token);
 			free(d_token);
 			return NULL;
@@ -952,7 +1029,7 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 		/* BEGIN: Added by weizengke, 2013/10/4   PN:for regCmdElem  */
 		if (0 != cmd_get_elem_by_name(token, desc))
 		{
-			debug_print("In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
+			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
 			free(token);
 			free(d_token);
 			free(desc);
@@ -960,7 +1037,7 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 		}
 		/* END:   Added by weizengke, 2013/10/4   PN:None */
 
-		debug_print("In cmd2Vec, desc. (elem_id=%d, elem_tpye=%d, para=%s, desc=%s)", desc->elem_id, desc->elem_tpye, desc->para, desc->desc);
+		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd2Vec, desc. (elem_id=%d, elem_tpye=%d, para=%s, desc=%s)", desc->elem_id, desc->elem_tpye, desc->para, desc->desc);
 
 		cmd_vector_insert(allvec, (void *)desc);
 	}
@@ -969,7 +1046,7 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 	desc_cr = (struct para_desc *)calloc(1, sizeof(struct para_desc));
 	if (desc_cr == NULL)
 	{
-		debug_print("In cmd2Vec, calloc for desc_cr fail. (token=%s)", token);
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2Vec, calloc for desc_cr fail. (token=%s)", token);
 		cmd_vector_deinit(allvec, 1);
 		return NULL;
 	}
@@ -977,14 +1054,14 @@ static cmd_vector_t *cmd2vec(char *string, char *doc)
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:for regCmdElem  */
 	if (0 != cmd_get_elem_by_name((char*)"<CR>", desc_cr))
 	{
-		debug_print("In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
 		free(desc_cr);
 		cmd_vector_deinit(allvec, 1);
 		return NULL;
 	}
 	/* END:   Added by weizengke, 2013/10/4   PN:None */
 
-	debug_print("In cmd2Vec, desc_cr. (elem_id=%d, elem_tpye=%d, para=%s, desc=%s)", desc_cr->elem_id, desc_cr->elem_tpye, desc_cr->para, desc_cr->desc);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd2Vec, desc_cr. (elem_id=%d, elem_tpye=%d, para=%s, desc=%s)", desc_cr->elem_id, desc_cr->elem_tpye, desc_cr->para, desc_cr->desc);
 
 	cmd_vector_insert(allvec, (void *)desc_cr);
 
@@ -1046,7 +1123,7 @@ int cmd_get_range_symbol(char *string, int *type, int *a, int *b)
 		*type = CMD_ELEM_TYPE_INTEGER;
 	}
 
-	debug_print("%s<%d-%d>",type_string, *a, *b);
+	debug_print_ex(CMD_DEBUG_TYPE_MSG, "%s<%d-%d>",type_string, *a, *b);
 
 	return CMD_OK;
 
@@ -1065,12 +1142,12 @@ int cmd_string_isdigit(char *string)
 	{
 		if (!isdigit(*(string + i)))
 		{
-			debug_print("cmd_string_isdigit return error.");
+			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "cmd_string_isdigit return error.");
 			return CMD_ERR;
 		}
 	}
 
-	debug_print("cmd_string_isdigit return ok.");
+	debug_print_ex(CMD_DEBUG_TYPE_INFO, "cmd_string_isdigit return ok.");
 	return CMD_OK;
 }
 
@@ -1091,13 +1168,13 @@ int cmd_match_special_string(char *icmd, char *dest)
 
 	if (icmd == NULL || dest == NULL)
 	{
-		debug_print("In cmd_match_special_string, param is null.");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_match_special_string, param is null.");
 		return CMD_ERR;
 	}
 
 	if (cmd_get_range_symbol(dest, &dest_type, &a, &b))
 	{
-		debug_print("In cmd_match_special_string, cmd_get_range_symbol fail, (dest_type=%d,a=%d,b=%d)", dest_type, a, b);
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_match_special_string, cmd_get_range_symbol fail, (dest_type=%d,a=%d,b=%d)", dest_type, a, b);
 		return CMD_ERR;
 	}
 
@@ -1109,7 +1186,7 @@ int cmd_match_special_string(char *icmd, char *dest)
 				int icmd_i = atoi(icmd);
 				if (icmd_i >= a && icmd_i <=b)
 				{
-					debug_print("In cmd_match_special_string, match INTEGER<%d-%d>.", a, b);
+					debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_match_special_string, match INTEGER<%d-%d>.", a, b);
 					return CMD_OK;
 				}
 			}
@@ -1119,7 +1196,7 @@ int cmd_match_special_string(char *icmd, char *dest)
 				int icmd_len = (int)strlen(icmd);
 				if (icmd_len >= a && icmd_len <= b)
 				{
-					debug_print("In cmd_match_special_string, match STRING<%d-%d>.", a, b);
+					debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_match_special_string, match STRING<%d-%d>.", a, b);
 					return CMD_OK;
 				}
 			}
@@ -1175,40 +1252,43 @@ static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:check cmd valid*/
 	if (cmd == NULL || 0 == strlen(cmd))
 	{
-		debug_print("In cmd_filter_command, the param cmd is null.");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_filter_command, the param cmd is null.");
 		return 0;
 	}
 
 	/* <CR> 不参与过滤，防止命令行子串也属于命令行时误过滤 */
 	if (0 == strcmp(cmd, "<CR>"))
 	{
-		debug_print("In cmd_filter_command, the param cmd is <CR>.");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_filter_command, the param cmd is <CR>.");
 		return 0;
 	}
 
 	/* END:   Added by weizengke, 2013/10/4   PN:None */
 
-	debug_print("In cmd_filter_command. (cmd=%s,size=%d)",cmd,strlen(cmd));
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_filter_command. (cmd=%s,size=%d)", cmd, strlen(cmd));
 
-	for (i = 0; i < cmd_vector_max(v); i++) {
-		if ((elem = (struct cmd_elem_st*)cmd_vector_slot(v, i)) != NULL) {
-			if (index >= cmd_vector_max(elem->para_vec)) {
-				debug_print("In cmd_filter_command. for loop -> %d filter. (cmd=%s)", i, cmd);
+	for (i = 0; i < cmd_vector_max(v); i++)
+	{
+		if ((elem = (struct cmd_elem_st*)cmd_vector_slot(v, i)) != NULL)
+		{
+			if (index >= cmd_vector_max(elem->para_vec))
+			{
+				debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_filter_command. for loop -> %d filter. (cmd=%s)", i, cmd);
 				cmd_vector_slot(v, i) = NULL;
 				continue;
 			}
 
 			desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, index);
 
-			debug_print("In cmd_filter_command. for loop -> %d. (cmd=%s,desc->para=%s)", i, cmd, desc->para);
+			debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_filter_command. for loop -> %d. (cmd=%s,desc->para=%s)", i, cmd, desc->para);
 
 			/* match STRING , INTEGER */
 			if (CMD_OK != cmd_match_special_string(cmd, desc->para))
 			{
-				debug_print("In cmd_filter_command. cmd_match_special_string return ERR. (cmd=%s,para=%s)",cmd,desc->para);
+				debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_filter_command. cmd_match_special_string return ERR. (cmd=%s,para=%s)",cmd,desc->para);
 				if(strncmp(cmd, desc->para, strlen(cmd)) != 0)
 				{
-					debug_print("In cmd_filter_command. for loop -> %d filter. (cmd=%s,desc->para=%s)", i, cmd, desc->para);
+					debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_filter_command. for loop -> %d filter. (cmd=%s,desc->para=%s)", i, cmd, desc->para);
 					cmd_vector_slot(v, i) = NULL;
 				}
 			}
@@ -1239,12 +1319,12 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 
 	if (icmd_vec == NULL)
 	{
-		debug_print("In cmd_match_command, icmd_vec is null.");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR,"In cmd_match_command, icmd_vec is null.");
 		return CMD_NO_MATCH;
 	}
 
 	isize = cmd_vector_max(icmd_vec) - 1;
-	debug_print("In cmd_match_command. (isize=%d)", isize);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_match_command. (isize=%d)", isize);
 
 	// Step 1
 	for (i = 0; i < isize; i++)
@@ -1252,7 +1332,7 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 		char *ipara = (char*)cmd_vector_slot(icmd_vec, i);
 		cmd_filter_command(ipara, cmd_vec_copy, i);
 
-		debug_print("In cmd_match_command, cmd_filter_command(ipara=%s, i=%d)", ipara, i);
+		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_match_command, cmd_filter_command(ipara=%s, i=%d)", ipara, i);
 	}
 
 	// Step 2
@@ -1260,21 +1340,20 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 	for(i = 0; i < cmd_vector_max(cmd_vec_copy); i++)
 	{
 
-		debug_print("In cmd_match_command, for loop -> %d.", i);
+		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_match_command, for loop -> %d.", i);
 
 		struct cmd_elem_st *elem = NULL;
 		elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
 
 		if(elem != NULL)
 		{
-			debug_print(" + In cmd_match_command, for loop -> %d.", i);
 			if (elem->para_vec == NULL)
 			{
- 				debug_print(" ++ In cmd_match_command, for loop -> %d. elem->para_vec is null", i);
+ 				debug_print_ex(CMD_DEBUG_TYPE_ERROR, " ++ In cmd_match_command, for loop -> %d. elem->para_vec is null", i);
 				continue;
  			}
 
- 			debug_print("In cmd_match_command, for loop -> %d, (isize=%d, v_size=%d)", i, isize, cmd_vector_max(elem->para_vec));
+ 			debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_match_command, for loop -> %d, (isize=%d, v_size=%d)", i, isize, cmd_vector_max(elem->para_vec));
 
 			if (isize >= cmd_vector_max(elem->para_vec))
 			{
@@ -1294,7 +1373,7 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 		}
 		else
 		{
-			debug_print("In cmd_match_command, for loop -> %d, elem is null.", i);
+			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_match_command, for loop -> %d, elem is null.", i);
 		}
 	}
 
@@ -1336,7 +1415,7 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 
 /*****************************************************************************
  Prototype    : cmd_complete_command
- Description  : complete command
+ Description  : complete command　for ? complete
  Input        : cmd_vector_t *icmd_vec  input cmd vector
                 struct cmd_vty *vty     the input vty
 
@@ -1363,7 +1442,7 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 
 	if (icmd_vec == NULL || vty == NULL || match == NULL || match_size == NULL)
 	{
-		debug_print("in cmd_complete_command, param is null");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "in cmd_complete_command, param is null");
 		return 1;
 	}
 
@@ -1379,45 +1458,45 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 	}
 	/* END:   Modified by weizengke, 2013/10/4   PN:None */
 
-	debug_print("In cmd_complete_command, after cmd_filter_command, cmd_vector_max(cmd_vec_copy)=%d",cmd_vector_max(cmd_vec_copy));
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_complete_command, after cmd_filter_command, cmd_vector_max(cmd_vec_copy)=%d",cmd_vector_max(cmd_vec_copy));
 
 	// Step 2
 	// insert matched command word into match_vec, only insert the next word
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:only the last vector we need */
-	for(i = 0; i < cmd_vector_max(cmd_vec_copy); i++) {
-
-		debug_print("In cmd_complete_command, for loop->i = %d. (icmd_vec_size=%d, cmd_vec_size=%d)", i, cmd_vector_max(icmd_vec), cmd_vector_max(cmd_vec_copy));
+	for(i = 0; i < cmd_vector_max(cmd_vec_copy); i++)
+	{
+		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_complete_command, for loop->i = %d. (icmd_vec_size=%d, cmd_vec_size=%d)", i, cmd_vector_max(icmd_vec), cmd_vector_max(cmd_vec_copy));
 
 		elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
-		if(elem  != NULL) {
-			if (cmd_vector_max(icmd_vec) - 1 >= cmd_vector_max(elem->para_vec)) {
+		if(elem  != NULL)
+		{
+			if (cmd_vector_max(icmd_vec) - 1 >= cmd_vector_max(elem->para_vec))
+			{
 				cmd_vector_slot(cmd_vec_copy, i) = NULL;
 				continue;
 			}
 
 			str = (char*)cmd_vector_slot(icmd_vec, cmd_vector_max(icmd_vec) - 1);
 			para_desc_ = (struct para_desc*)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 1);
-
 			if (para_desc_ == NULL)
 			{
-				debug_print("In cmd_complete_command, para_desc_ is null");
+				debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_complete_command, para_desc_ is null");
 				continue;
 			}
 
-			debug_print("In cmd_complete_command, for loop->i = %d, (str=%s, id=%d, para=%s)", i, str, para_desc_->elem_id, para_desc_->para);
+			debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_complete_command, for loop->i = %d, (str=%s, id=%d, para=%s)", i, str, para_desc_->elem_id, para_desc_->para);
 
-			/* BEGIN: Added by weizengke, 2013/10/4   PN:str is null, then get all command */
 			if ( str != NULL &&
 			     (strncmp(str, "<CR>", strlen(str)) == 0
-			     ||(strncmp(str, para_desc_->para, strlen(str)) == 0))) {
+			     ||(strncmp(str, para_desc_->para, strlen(str)) == 0)))
+			{
 
 				if (match_unique_string(match, para_desc_->para, match_num))
 				{
-					debug_print("In cmd_complete_command, match(%s).", para_desc_->para);
+					debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_complete_command, match(%s).", para_desc_->para);
 					match[match_num++] = para_desc_;
 				}
 			}
-			/* END:   Added by weizengke, 2013/10/4   PN:None */
 
 		}
 	}
@@ -1437,7 +1516,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	struct cmd_elem_st *match_elem = NULL;
 	int match_num = 0;
 
-	debug_print("In cmd_execute_command, input_command_size=%d. (include <CR>)", cmd_vector_max(icmd_vec));
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_execute_command, input_command_size=%d. (include <CR>)", cmd_vector_max(icmd_vec));
 	/*
 	Two steps to find matched commands in 'cmd_vec'
 	 1. for input command vector 'icmd_vec', check if it is matching cmd_vec
@@ -1462,7 +1541,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 			str = (char*)cmd_vector_slot(icmd_vec, cmd_vector_max(icmd_vec) - 1);
 			desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 1);
 
-			debug_print("In cmd_execute_command, loop->%d. (str=%s, para=%s, desc=%s)", i, str, desc->para, desc->desc);
+			debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_execute_command, loop->%d. (str=%s, para=%s, desc=%s)", i, str, desc->para, desc->desc);
 
 			/* modified for command without argv */
 			if (cmd_vector_max(icmd_vec) == cmd_vector_max(elem->para_vec))
@@ -1475,7 +1554,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 					match[match_num] = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 2);
 					/* END:   Added by weizengke, 2013/10/6   PN:None */
 
-					debug_print("***** In cmd_execute_command, match one **** (match_string=%s)", str, match[match_num]->para);
+					debug_print_ex(CMD_DEBUG_TYPE_INFO, "***** In cmd_execute_command, match one **** (match_string=%s)", str, match[match_num]->para);
 
 					match_num++;
 					match_elem = elem;
@@ -1510,7 +1589,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 
 	if (NULL == match_elem || match_elem->para_vec == NULL)
 	{
-		debug_print("In cmd_execute_command, bug of match_elem is NULL........");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_execute_command, bug of match_elem is NULL........");
 		return CMD_NO_MATCH;
 	}
 
@@ -1519,11 +1598,11 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 		struct para_desc  *desc = (struct para_desc *)cmd_vector_slot(match_elem->para_vec, i);
 		if (NULL == desc)
 		{
-			debug_print("In cmd_execute_command, bug of desc is NULL........");
+			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_execute_command, bug of desc is NULL........");
 			return CMD_NO_MATCH;
 		}
 
-		debug_print("elem_id=%d, elem_tpye=%d, para=%s(%s)", desc->elem_id, desc->elem_tpye, desc->para, (char*)cmd_vector_slot(icmd_vec, i));
+		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "elem_id=%d, elem_tpye=%d, para=%s(%s)", desc->elem_id, desc->elem_tpye, desc->para, (char*)cmd_vector_slot(icmd_vec, i));
 
 		/* <CR> no need to push */
 		if (desc->elem_tpye == CMD_ELEM_TYPE_END)
@@ -1552,17 +1631,17 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 void install_element(struct cmd_elem_st *elem)
 {
 	if (cmd_vec == NULL) {
-		cmd_debug(LOG_ERR, FNAME, "Command Vector Not Exist");
+		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "Command Vector Not Exist");
 		exit(1);
 	}
 
-	debug_print("install_element, string(%s), doc(%s).", elem->string, elem->doc);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "install_element, string(%s), doc(%s).", elem->string, elem->doc);
 
 	cmd_vector_insert(cmd_vec, elem);
 	elem->para_vec = cmd2vec(elem->string, elem->doc);
 	elem->para_num = cmd_vector_max(elem->para_vec);
 
-	debug_print("install_element ok, string(%s), generate para_num(%d). ", elem->string, elem->para_num);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "install_element ok, string(%s), generate para_num(%d). ", elem->string, elem->para_num);
 
 }
 
@@ -1758,11 +1837,11 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 	char lcd_str[1024] = {0};	// if part match, then use this
 	char *last_word = NULL;
 
-	debug_print("TAB for completing command. (buf=%s)", vty->buffer);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. (buf=%s)", vty->buffer);
 
 	if (g_InputMachine_prev == CMD_KEY_CODE_TAB)
 	{
-		debug_print("TAB for completing command. continue tabMachine. (g_tabbingString=%s)", g_tabbingString);
+		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. continue tabMachine. (g_tabbingString=%s)", g_tabbingString);
 		cmd_delete_word(vty);
 		cmd_insert_word(vty, g_tabbingString);
 	}
@@ -1775,7 +1854,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 	v = str2vec(vty->buffer);
 	if (v == NULL)
 	{
-		debug_print("TAB for completing command. str2vec return is null. (buf=%s)", vty->buffer);
+		debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. str2vec return is null. (buf=%s)", vty->buffer);
 		/*
 		v = cmd_vector_init(1);
 		cmd_vector_insert(v, '\0');
@@ -1785,7 +1864,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 
 	if (isspace((int)vty->buffer[vty->used_len - 1]))
 	{
-		debug_print("TAB for completing command. the last one is space (buf=%s)", vty->buffer);
+		debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. the last one is space (buf=%s)", vty->buffer);
 		isNeedMatch = 0;
 	}
 
@@ -1800,12 +1879,12 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			strcpy(g_tabbingString, last_word);
 		}
 
-		debug_print("TAB for completing command. the last word is (last_word=%s, vector_size=%d)", last_word, cmd_vector_max(v) - 1);
+		debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. the last word is (last_word=%s, vector_size=%d)", last_word, cmd_vector_max(v) - 1);
 
 		cmd_vector_deinit(v, 1);
 	}
 
-	debug_print("TAB for completing command. after cmd_match_command. (match_type=%d)", match_type);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. after cmd_match_command. (match_type=%d)", match_type);
 
 	cmd_outstring("%s", CMD_ENTER);
 	switch (match_type) {
@@ -1842,7 +1921,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 
 			if (g_InputMachine_prev != CMD_KEY_CODE_TAB)
 			{
-				debug_print("TAB for completing command. enter tabMachine. (g_tabString=%s)", g_tabString);
+				debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. enter tabMachine. (g_tabString=%s)", g_tabString);
 				memset(g_tabString,0,sizeof(g_tabString));
 				strcpy(g_tabString, match[0]->para);
 				g_tabStringLenth = strlen(g_tabString);
@@ -1851,7 +1930,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			}
 			else
 			{
-				debug_print("TAB for completing command. continue tabMachine. (g_tabString=%s)", g_tabString);
+				debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. continue tabMachine. (g_tabString=%s)", g_tabString);
 
 				for (i = 0; i < match_size; i++)
 				{
@@ -1861,11 +1940,11 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 					}
 				}
 
-				debug_print("TAB for completing command. continue tabMachine. (i=%d, match_size=%d)", i, match_size);
+				debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. continue tabMachine. (i=%d, match_size=%d)", i, match_size);
 
 				if (i == match_size)
 				{
-					debug_print("TAB for completing command. bug of tab continue. (g_tabString=%s)", g_tabString);
+					debug_print_ex(CMD_DEBUG_TYPE_ERROR, "TAB for completing command. bug of tab continue. (g_tabString=%s)", g_tabString);
 				}
 
 				i++;
@@ -1879,7 +1958,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 				strcpy(g_tabString, match[i]->para);
 				g_tabStringLenth = strlen(g_tabString);
 
-				debug_print("TAB for completing command. continue tabMachine. (match[i]->para=%s, g_tabStringLenth=%d)", match[i]->para, g_tabStringLenth);
+				debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. continue tabMachine. (match[i]->para=%s, g_tabStringLenth=%d)", match[i]->para, g_tabStringLenth);
 
 			}
 
@@ -1968,6 +2047,11 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 
 /*
    1: 完全匹配输入时，只返回该命令的联想  2013-10-27 (未实现)
+
+   2:bug:
+   		display loopback
+   		disable loopback-detect
+   	  >dis loop   =======> show what
 */
 void cmd_resolve_quest(struct cmd_vty *vty)
 {
@@ -1976,32 +2060,32 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 	int match_size = 0;
 	int i = 0;
 
-	debug_print("'?' for associating command. (buf=%s)", vty->buffer);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "'?' for associating command. (buf=%s)", vty->buffer);
 
 	v = str2vec(vty->buffer);
 	if (v == NULL)
 	{
-		debug_print("'?' for associating command. after str2vec, v is null (buf=%s)", vty->buffer);
+		debug_print_ex(CMD_DEBUG_TYPE_INFO, "'?' for associating command. after str2vec, v is null (buf=%s)", vty->buffer);
 
 		v = cmd_vector_init(1);
 		cmd_vector_insert_cr(v);
 	}
 	else if (isspace((int)vty->buffer[vty->used_len - 1]))
 	{
-		debug_print("'?' for associating command. the last one is space (buf=%s)", vty->buffer);
+		debug_print_ex(CMD_DEBUG_TYPE_INFO, "'?' for associating command. the last one is space (buf=%s)", vty->buffer);
 		cmd_vector_insert_cr(v);
 	}
 
-	debug_print("In cmd_resolve_quest, after str2vec, get %d vector.", v->size);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_resolve_quest, after str2vec, get %d vector.", v->size);
 
 	for (i = 0; i < cmd_vector_max(v); i++)
 	{
-		debug_print("In cmd_resolve_quest, str=%s.", (char*)cmd_vector_slot(v, i));
+		debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_resolve_quest, str=%s.", (char*)cmd_vector_slot(v, i));
 	}
 
 	cmd_complete_command(v, vty, match, &match_size);
 
-	debug_print("In cmd_resolve_quest, after cmd_complete_command, get %d matched.", match_size);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_resolve_quest, after cmd_complete_command, get %d matched.", match_size);
 
 	cmd_outstring("%s", CMD_ENTER);
 	if (match_size) {
@@ -2164,32 +2248,32 @@ key_handler_t key_resolver[] = {
  * Below is an example, you can copy, paste, modify, and compile
  */
 
-DEFUN(cmd_debug_on_st, (char*)"debug on", (char*)"Debug switch on", debug_on)
+DEFUN(cmd_debug_enable_st, (char*)"debug enable", (char*)"Debug switch on", debug_enable)
 {
-	if (g_debug_switch == DEBUG_ON)
+	if (g_debug_switch == DEBUG_ENABLE)
 	{
-		printf("Info: debug switch is already on.\n");
+		printf("Info: debug switch is already enable.\n");
 		return 0;
 	}
 
-	g_debug_switch = DEBUG_ON;
-	printf("Info: debug switch is on.\n");
+	g_debug_switch = DEBUG_ENABLE;
+	printf("Info: debug switch is enable.\n");
 
 	return 0;
 }
 
 
-DEFUN(cmd_debug_off_st, (char*)"debug off", (char*)"Debug switch off", debug_off)
+DEFUN(cmd_undo_debug_enable_st, (char*)"undo debug enable", (char*)"Debug switch off", undo_debug_enable)
 {
 
-	if (g_debug_switch == DEBUG_OFF)
+	if (g_debug_switch == DEBUG_DISABLE)
 	{
-		printf("Info: debug switch is already off.\n");
+		printf("Info: debug switch is already disable.\n");
 		return 0;
 	}
 
-	g_debug_switch = DEBUG_OFF;
-	printf("Info: debug switch is off.\n");
+	g_debug_switch = DEBUG_DISABLE;
+	printf("Info: debug switch is disable.\n");
 
 	return 0;
 }
@@ -2360,13 +2444,13 @@ DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)
 	int n = 0;
 	int i = 0;
 
-	debug_print("%d %s %s %s\n", argc, argv[0], argv[1], argv[2]);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s\n", argc, argv[0], argv[1], argv[2]);
 
 	CMD_DBGASSERT(argv[2]);
 
 	n = atoi(argv[2]);
 
-	debug_print("n = %d\n", n);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC,"n = %d\n", n);
 
 	for (i = 0;  i < HISTORY_MAX_SIZE; i++)
 	{
@@ -2382,7 +2466,7 @@ DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)
 		cmd_outstring("%s\r\n", vty->history[i]);
 	}
 
-	debug_print("+");
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC,"+");
 
 	return 0;
 }
@@ -2396,6 +2480,110 @@ DEFUN(cmd_loopback_internal_st, (char*)"loopback internal", (char*)"loopback int
 DEFUN(cmd_loopback_detect_enable_st, (char*)"loopback-detect enable", (char*)"loopback-detect enable", loopback_detect_enable)
 {
 	printf("Info: loopback-detect enable.\n");
+	return 0;
+}
+
+DEFUN(cmd_display_loopback_st, (char*)"display loopback", (char*)"display loopback info", display_loopback)
+{
+	printf("Info: display loopback.\n");
+	return 0;
+}
+DEFUN(cmd_disable_loopback_detect_st, (char*)"disable loopback-detect", (char*)"disable loopback-detect protocol", disable_loopback_detect)
+{
+	printf("Info: disable loopback-detect.\n");
+	return 0;
+}
+
+DEFUN(cmd_debug_error_st, (char*)"debug error", (char*)"open debug error switch", debug_error)
+{
+	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_ERROR);
+	printf("Info: debug error switch is on.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_undo_debug_error_st, (char*)"undo debug error", (char*)"close debug error switch", undo_debug_error)
+{
+	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_ERROR);
+	printf("Info: debug error switch is off.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_debug_function_st, (char*)"debug function", (char*)"open debug function switch", debug_function)
+{
+	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_FUNC);
+	printf("Info: debug function switch is on.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_undo_debug_function_st, (char*)"undo debug function", (char*)"close debug function switch", undo_debug_function)
+{
+	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_FUNC);
+	printf("Info: debug function switch is off.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_debug_info_st, (char*)"debug info", (char*)"open debug info switch", debug_info)
+{
+	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_INFO);
+	printf("Info: debug info switch is on.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_undo_debug_info_st, (char*)"undo debug info", (char*)"close debug info switch", undo_debug_info)
+{
+	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_INFO);
+	printf("Info: debug info switch is off.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_debug_message_st, (char*)"debug message", (char*)"open debug message switch", debug_message)
+{
+	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_MSG);
+	printf("Info: debug message switch is on.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_undo_debug_message_st, (char*)"undo debug message", (char*)"close debug message switch", undo_debug_message)
+{
+	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_MSG);
+	printf("Info: debug message switch is off.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_debug_fsm_st, (char*)"debug fsm", (char*)"open debug fsm switch", debug_fsm)
+{
+	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_FSM);
+	printf("Info: debug fsm switch is on.\r\n");
+	return 0;
+}
+
+DEFUN(cmd_undo_debug_fsm_st, (char*)"undo debug fsm", (char*)"close debug fsm switch", undo_debug_fsm)
+{
+	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_FSM);
+	printf("Info: debug message switch is off.\r\n");
+	return 0;
+}
+
+
+DEFUN(cmd_display_debug_st, (char*)"display debug", (char*)"display debug switch", display_debug)
+{
+	int i = 0;
+
+	printf("	    DebugMask(0x%x", g_aulDebugMask[0]);
+	for (i = 1; i < CMD_DEBUG_TYPE_MAX/CMD_MASKLENTG + 1 ; i++)
+	{
+		printf("	,0x%x", g_aulDebugMask[i]);
+	}
+	printf(")\r\n");
+
+	for (i = CMD_DEBUG_TYPE_NONE + 1; i < CMD_DEBUG_TYPE_MAX; i++ )
+	{
+		if (CMD_DEBUGMASK_GET(i))
+		{
+			printf(" Debug %s switch is on.\r\n", szDebugName[i]);
+		}
+	}
+
 	return 0;
 }
 
@@ -2436,14 +2624,21 @@ void cmd_init()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_LOOPBACK_DETECT,CMD_ELEM_TYPE_KEY,   		"loopback-detect", 	"loopback-detect protocol");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_INTERNAL,		CMD_ELEM_TYPE_KEY,			"internal", 		"Internal");
 
+	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_ERROR,  CMD_ELEM_TYPE_KEY,			"error",			"Error");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_FUNC,   CMD_ELEM_TYPE_KEY,			"function",			"Function");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_INFO,   CMD_ELEM_TYPE_KEY,			"info",				"Information");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_MSG,    CMD_ELEM_TYPE_KEY,			"message",			"Message");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_FSM,    CMD_ELEM_TYPE_KEY,			"fsm",				"Finite State Machine");
+
+
 	// install command
 	// ---------------------------------------------------
 
 
 	install_element(&cmd_sysname_st);
 
-	install_element(&cmd_debug_on_st);
- 	install_element(&cmd_debug_off_st);
+	install_element(&cmd_debug_enable_st);
+ 	install_element(&cmd_undo_debug_enable_st);
 
 	install_element(&cmd_stp_enable_st);
 	install_element(&cmd_stp_disable_st);
@@ -2471,7 +2666,25 @@ void cmd_init()
 	install_element(&cmd_loopback_internal_st);
 	install_element(&cmd_loopback_detect_enable_st);
 
+	install_element(&cmd_display_loopback_st);
+	install_element(&cmd_disable_loopback_detect_st);
 
+	install_element(&cmd_debug_error_st);
+	install_element(&cmd_undo_debug_error_st);
+
+	install_element(&cmd_debug_function_st);
+	install_element(&cmd_undo_debug_function_st);
+
+	install_element(&cmd_debug_info_st);
+	install_element(&cmd_undo_debug_info_st);
+
+	install_element(&cmd_debug_message_st);
+	install_element(&cmd_undo_debug_message_st);
+
+	install_element(&cmd_debug_fsm_st);
+	install_element(&cmd_undo_debug_fsm_st);
+
+	install_element(&cmd_display_debug_st);
 	// ---------------------------------------------------
 
 /*
@@ -2511,7 +2724,7 @@ void cmd_read(struct cmd_vty *vty)
 
 
 		if (key_type <= CMD_KEY_CODE_NONE || key_type > CMD_KEY_CODE_NOTCARE) {
-			debug_print("Unidentify Key Type, c = %c, key_type = %d\n", vty->c, key_type);
+			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "Unidentify Key Type, c = %c, key_type = %d\n", vty->c, key_type);
 			continue;
 		}
 
