@@ -52,6 +52,7 @@ Note:
 
 #define CMD_MAX_SYSNAME_SIZE 24
 
+#define CMD_ELEM_SPACE_SIZE  CMD_MAX_CMD_ELEM_SIZE + 1
 
 #define CMD_MAX_PROMPT_SIZE 24
 
@@ -1924,14 +1925,15 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			cmd_outprompt(vty->prompt);
 			cmd_outstring("%s", vty->buffer);
 
-			/* BEGIN: Added by weizengke, 2013/10/27 PN: for bug of CMD_FULL_MATCH and then continue TAB*/
+			/* BEGIN: Added by weizengke, 2013/10/27 PN: fix the bug of CMD_FULL_MATCH and then continue TAB*/
 			memset(g_tabString,0,sizeof(g_tabString));
 			memset(g_tabbingString,0,sizeof(g_tabbingString));
+			g_tabStringLenth = 0;
 			/* END:   Added by weizengke, 2013/10/27 */
 
 			break;
 		case CMD_PART_MATCH:
-			/*  delete at 2013-10-05
+			/*  delete at 2013-10-05, CMD_PART_MATCH will never reach, CMD_LIST_MATCH instead.
 
 				case like this:
 					disable , display
@@ -1947,7 +1949,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 
 			if (g_InputMachine_prev != CMD_KEY_CODE_TAB)
 			{
-				debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. enter tabMachine. (g_tabString=%s)", g_tabString);
+				debug_print_ex(CMD_DEBUG_TYPE_FSM, "TAB for completing command. enter tabMachine. (g_tabString=%s)", g_tabString);
 				memset(g_tabString,0,sizeof(g_tabString));
 				strcpy(g_tabString, match[0]->para);
 				g_tabStringLenth = strlen(g_tabString);
@@ -1956,7 +1958,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			}
 			else
 			{
-				debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. continue tabMachine. (g_tabString=%s)", g_tabString);
+				debug_print_ex(CMD_DEBUG_TYPE_FSM, "TAB for completing command. continue tabMachine. (g_tabString=%s)", g_tabString);
 
 				for (i = 0; i < match_size; i++)
 				{
@@ -1966,7 +1968,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 					}
 				}
 
-				debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. continue tabMachine. (i=%d, match_size=%d)", i, match_size);
+				debug_print_ex(CMD_DEBUG_TYPE_FSM, "TAB for completing command. continue tabMachine. (i=%d, match_size=%d)", i, match_size);
 
 				if (i == match_size)
 				{
@@ -1984,14 +1986,14 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 				strcpy(g_tabString, match[i]->para);
 				g_tabStringLenth = strlen(g_tabString);
 
-				debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. continue tabMachine. (match[i]->para=%s, g_tabStringLenth=%d)", match[i]->para, g_tabStringLenth);
+				debug_print_ex(CMD_DEBUG_TYPE_FSM, "TAB for completing command. continue tabMachine. (match[i]->para=%s, g_tabStringLenth=%d)", match[i]->para, g_tabStringLenth);
 
 			}
 
 			/*for (i = 0; i < match_size; i++) {
 				if (ANOTHER_LINE(i))
 					cmd_outstring("%s", CMD_ENTER);
-				cmd_outstring("%-10s	", match[i]->para);
+				cmd_outstring("%-25s", match[i]->para);
 			}
 			*/
 
@@ -2055,11 +2057,16 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 			{
 				if (ANOTHER_LINE(i))
 					cmd_outstring("%s", CMD_ENTER);
-				cmd_outstring("%-10s	", match[i]->para);
+				cmd_outstring(" %-25s", match[i]->para);
 			}
 			cmd_outstring("%s", CMD_ENTER);
+			/* del 10-29
 			cmd_outprompt(vty->prompt);
 			cmd_outstring("%s", vty->buffer);
+			*/
+			vty->cur_pos = vty->used_len = 0;
+			memset(vty->buffer, 0, vty->buf_len);
+			cmd_outprompt(vty->prompt);
 		}
 	}
 	else
@@ -2116,7 +2123,7 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 	cmd_outstring("%s", CMD_ENTER);
 	if (match_size) {
 		for (i = 0; i < match_size; i++) {
-			cmd_outstring("%-10s	%s\r\n", match[i]->para,match[i]->desc);
+			cmd_outstring(" %-25s%s\r\n", match[i]->para,match[i]->desc);
 		}
 		cmd_outprompt(vty->prompt);
 		cmd_outstring("%s", vty->buffer);
